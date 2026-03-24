@@ -18,7 +18,7 @@ const Filters = ({ filters, setFilters, fournisseurs, transporteurs, clients, mo
     }
   }, [isOpen]);
 
-  // Close on click outside
+  // Close on click outside or scroll
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
@@ -28,8 +28,15 @@ const Filters = ({ filters, setFilters, fournisseurs, transporteurs, clients, mo
         setIsOpen(false);
       }
     };
-    if (isOpen) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    const handleScroll = () => setIsOpen(false);
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('scroll', handleScroll, true);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
   }, [isOpen]);
 
   // Count active filters (excluding search)

@@ -1,13 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 
 const Filters = ({ filters, setFilters, fournisseurs, transporteurs, clients, modes }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const buttonRef = useRef(null);
   const panelRef = useRef(null);
+  const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
+
+  // Update position when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPanelPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+  }, [isOpen]);
 
   // Close on click outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target) &&
+        buttonRef.current && !buttonRef.current.contains(e.target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -31,6 +48,144 @@ const Filters = ({ filters, setFilters, fournisseurs, transporteurs, clients, mo
     depart: '', arrivee: '', mode: '', client: '',
   };
 
+  // Render the dropdown via a Portal so it escapes all stacking contexts
+  const dropdownPanel = isOpen
+    ? ReactDOM.createPortal(
+        <div
+          ref={panelRef}
+          className="fixed w-80 bg-dark-800 border border-dark-600 rounded-2xl shadow-2xl shadow-black/40 animate-slide-up overflow-hidden"
+          style={{
+            top: panelPos.top,
+            right: panelPos.right,
+            zIndex: 99999,
+          }}
+        >
+          {/* Panel header */}
+          <div className="flex items-center justify-between px-5 py-3 border-b border-dark-700/50">
+            <h4 className="text-sm font-semibold text-white">Filtres avancés</h4>
+            {activeCount > 0 && (
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, ...defaultFilters, search: prev.search }))}
+                className="text-xs text-red-400 hover:text-red-300 transition-colors"
+              >
+                Tout effacer
+              </button>
+            )}
+          </div>
+
+          {/* Filter fields */}
+          <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto">
+            {/* Import / Export */}
+            <FilterField label="Import / Export">
+              <select
+                value={filters.type_operation}
+                onChange={(e) => setFilters(prev => ({ ...prev, type_operation: e.target.value }))}
+                className="filter-select w-full"
+              >
+                <option value="">Tous</option>
+                <option value="Import">📥 Import</option>
+                <option value="Export">📤 Export</option>
+              </select>
+            </FilterField>
+
+            {/* Transporteur */}
+            <FilterField label="Transporteur">
+              <select
+                value={filters.transporteur}
+                onChange={(e) => setFilters(prev => ({ ...prev, transporteur: e.target.value }))}
+                className="filter-select w-full"
+              >
+                <option value="">Tous</option>
+                {transporteurs.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </FilterField>
+
+            {/* Départ */}
+            <FilterField label="Lieu de Départ">
+              <input
+                type="text"
+                value={filters.depart}
+                onChange={(e) => setFilters(prev => ({ ...prev, depart: e.target.value }))}
+                placeholder="Rechercher un lieu..."
+                className="filter-select w-full"
+              />
+            </FilterField>
+
+            {/* Arrivée */}
+            <FilterField label="Lieu d'Arrivée">
+              <input
+                type="text"
+                value={filters.arrivee}
+                onChange={(e) => setFilters(prev => ({ ...prev, arrivee: e.target.value }))}
+                placeholder="Rechercher un lieu..."
+                className="filter-select w-full"
+              />
+            </FilterField>
+
+            {/* Mode */}
+            <FilterField label="Mode de Transport">
+              <select
+                value={filters.mode}
+                onChange={(e) => setFilters(prev => ({ ...prev, mode: e.target.value }))}
+                className="filter-select w-full"
+              >
+                <option value="">Tous</option>
+                {modes.map(m => (
+                  <option key={m} value={m}>
+                    {m === 'Maritime' ? '🚢 Maritime' : m === 'Aérien' ? '✈️ Aérien' : '🚛 Routier'}
+                  </option>
+                ))}
+              </select>
+            </FilterField>
+
+            {/* Client */}
+            <FilterField label="Client">
+              <select
+                value={filters.client}
+                onChange={(e) => setFilters(prev => ({ ...prev, client: e.target.value }))}
+                className="filter-select w-full"
+              >
+                <option value="">Tous</option>
+                {clients.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </FilterField>
+
+            {/* Fournisseur */}
+            <FilterField label="Fournisseur">
+              <select
+                value={filters.fournisseur}
+                onChange={(e) => setFilters(prev => ({ ...prev, fournisseur: e.target.value }))}
+                className="filter-select w-full"
+              >
+                <option value="">Tous</option>
+                {fournisseurs.map(f => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </FilterField>
+          </div>
+
+          {/* Apply button */}
+          <div className="px-4 py-3 border-t border-dark-700/50">
+            <button
+              onClick={() => setIsOpen(false)}
+              className="w-full py-2 rounded-xl text-sm font-medium text-white
+                         bg-gradient-to-r from-primary-500 to-primary-600
+                         hover:from-primary-400 hover:to-primary-500
+                         transition-all duration-200"
+            >
+              Appliquer
+            </button>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
+
   return (
     <div className="glass-card p-5 animate-fade-in" style={{ animationDelay: '200ms' }}>
       <div className="flex items-center gap-3">
@@ -52,8 +207,9 @@ const Filters = ({ filters, setFilters, fournisseurs, transporteurs, clients, mo
         </div>
 
         {/* Filter icon button */}
-        <div className="relative" ref={panelRef}>
+        <div className="relative">
           <button
+            ref={buttonRef}
             onClick={() => setIsOpen(!isOpen)}
             className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium
                        border transition-all duration-200 ${
@@ -72,140 +228,10 @@ const Filters = ({ filters, setFilters, fournisseurs, transporteurs, clients, mo
               </span>
             )}
           </button>
-
-          {/* Filter dropdown panel */}
-          {isOpen && (
-            <div 
-              className="fixed w-80 z-[9999] bg-dark-800 border border-dark-600 rounded-2xl shadow-2xl shadow-black/40 animate-slide-up overflow-hidden"
-              style={{
-                top: panelRef.current ? panelRef.current.getBoundingClientRect().bottom + 8 : 0,
-                right: window.innerWidth - (panelRef.current ? panelRef.current.getBoundingClientRect().right : 0),
-              }}
-            >
-              {/* Panel header */}
-              <div className="flex items-center justify-between px-5 py-3 border-b border-dark-700/50">
-                <h4 className="text-sm font-semibold text-white">Filtres avancés</h4>
-                {activeCount > 0 && (
-                  <button
-                    onClick={() => setFilters(prev => ({ ...prev, ...defaultFilters, search: prev.search }))}
-                    className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    Tout effacer
-                  </button>
-                )}
-              </div>
-
-              {/* Filter fields */}
-              <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto">
-                {/* Import / Export */}
-                <FilterField label="Import / Export">
-                  <select
-                    value={filters.type_operation}
-                    onChange={(e) => setFilters(prev => ({ ...prev, type_operation: e.target.value }))}
-                    className="filter-select w-full"
-                  >
-                    <option value="">Tous</option>
-                    <option value="Import">📥 Import</option>
-                    <option value="Export">📤 Export</option>
-                  </select>
-                </FilterField>
-
-                {/* Transporteur */}
-                <FilterField label="Transporteur">
-                  <select
-                    value={filters.transporteur}
-                    onChange={(e) => setFilters(prev => ({ ...prev, transporteur: e.target.value }))}
-                    className="filter-select w-full"
-                  >
-                    <option value="">Tous</option>
-                    {transporteurs.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                </FilterField>
-
-                {/* Départ */}
-                <FilterField label="Lieu de Départ">
-                  <input
-                    type="text"
-                    value={filters.depart}
-                    onChange={(e) => setFilters(prev => ({ ...prev, depart: e.target.value }))}
-                    placeholder="Rechercher un lieu..."
-                    className="filter-select w-full"
-                  />
-                </FilterField>
-
-                {/* Arrivée */}
-                <FilterField label="Lieu d'Arrivée">
-                  <input
-                    type="text"
-                    value={filters.arrivee}
-                    onChange={(e) => setFilters(prev => ({ ...prev, arrivee: e.target.value }))}
-                    placeholder="Rechercher un lieu..."
-                    className="filter-select w-full"
-                  />
-                </FilterField>
-
-                {/* Mode */}
-                <FilterField label="Mode de Transport">
-                  <select
-                    value={filters.mode}
-                    onChange={(e) => setFilters(prev => ({ ...prev, mode: e.target.value }))}
-                    className="filter-select w-full"
-                  >
-                    <option value="">Tous</option>
-                    {modes.map(m => (
-                      <option key={m} value={m}>
-                        {m === 'Maritime' ? '🚢 Maritime' : m === 'Aérien' ? '✈️ Aérien' : '🚛 Routier'}
-                      </option>
-                    ))}
-                  </select>
-                </FilterField>
-
-                {/* Client */}
-                <FilterField label="Client">
-                  <select
-                    value={filters.client}
-                    onChange={(e) => setFilters(prev => ({ ...prev, client: e.target.value }))}
-                    className="filter-select w-full"
-                  >
-                    <option value="">Tous</option>
-                    {clients.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </FilterField>
-
-                {/* Fournisseur */}
-                <FilterField label="Fournisseur">
-                  <select
-                    value={filters.fournisseur}
-                    onChange={(e) => setFilters(prev => ({ ...prev, fournisseur: e.target.value }))}
-                    className="filter-select w-full"
-                  >
-                    <option value="">Tous</option>
-                    {fournisseurs.map(f => (
-                      <option key={f} value={f}>{f}</option>
-                    ))}
-                  </select>
-                </FilterField>
-              </div>
-
-              {/* Apply button */}
-              <div className="px-4 py-3 border-t border-dark-700/50">
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="w-full py-2 rounded-xl text-sm font-medium text-white
-                             bg-gradient-to-r from-primary-500 to-primary-600
-                             hover:from-primary-400 hover:to-primary-500
-                             transition-all duration-200"
-                >
-                  Appliquer
-                </button>
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Portal-rendered dropdown */}
+        {dropdownPanel}
 
         {/* Reset all */}
         {(filters.search || activeCount > 0) && (

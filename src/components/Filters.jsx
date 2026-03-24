@@ -7,18 +7,29 @@ const Filters = ({ filters, setFilters, fournisseurs, transporteurs, clients, mo
   const panelRef = useRef(null);
   const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
 
-  // Update position when opening
+  // Update position on open + on scroll so dropdown follows the button
   useEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setPanelPos({
-        top: rect.bottom + 8,
-        right: window.innerWidth - rect.right,
-      });
+    const updatePosition = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setPanelPos({
+          top: rect.bottom + 8,
+          right: window.innerWidth - rect.right,
+        });
+      }
+    };
+    if (isOpen) {
+      updatePosition();
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
     }
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
   }, [isOpen]);
 
-  // Close on click outside or scroll
+  // Close on click outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
@@ -28,14 +39,11 @@ const Filters = ({ filters, setFilters, fournisseurs, transporteurs, clients, mo
         setIsOpen(false);
       }
     };
-    const handleScroll = () => setIsOpen(false);
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      window.addEventListener('scroll', handleScroll, true);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('scroll', handleScroll, true);
     };
   }, [isOpen]);
 

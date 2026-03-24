@@ -40,7 +40,7 @@ const LoginPage = ({ onLogin }) => {
       }}
     >
       {/* Dark overlay */}
-      <div className="absolute inset-0 bg-dark-900/75 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-dark-900/65" />
       
       {/* Teal glow accents */}
       <div className="absolute inset-0 pointer-events-none">

@@ -75,7 +75,7 @@ const Filters = ({ filters, setFilters, fournisseurs, transporteurs, clients, mo
 
           {/* Filter dropdown panel */}
           {isOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 z-50 bg-dark-800 border border-dark-600 rounded-2xl shadow-2xl shadow-black/40 animate-slide-up overflow-hidden">
+            <div className="absolute right-0 top-full mt-2 w-80 z-[200] bg-dark-800 border border-dark-600 rounded-2xl shadow-2xl shadow-black/40 animate-slide-up overflow-hidden">
               {/* Panel header */}
               <div className="flex items-center justify-between px-5 py-3 border-b border-dark-700/50">
                 <h4 className="text-sm font-semibold text-white">Filtres avancés</h4>

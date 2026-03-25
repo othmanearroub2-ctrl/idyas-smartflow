@@ -8,6 +8,8 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
     Fournisseur: '',
     Client: '',
     Transporteur: '',
+    Numero_TC: '',
+    Numero_Remorque: '',
     Lieu_Chargement: '',
     Lieu_Dechargement: '',
     Mode_Transport: '',
@@ -32,6 +34,8 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
         Fournisseur: '',
         Client: '',
         Transporteur: '',
+        Numero_TC: '',
+        Numero_Remorque: '',
         Lieu_Chargement: '',
         Lieu_Dechargement: '',
         Mode_Transport: '',
@@ -261,12 +265,30 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
                   className="form-input"
                 />
               </FormField>
-              <FormField label="Lieu de Déchargement" fullWidth>
+              <FormField label="Lieu de Déchargement">
                 <input
                   type="text"
                   value={form.Lieu_Dechargement}
                   onChange={(e) => handleChange('Lieu_Dechargement', e.target.value)}
                   placeholder="Port ou entrepôt d'arrivée"
+                  className="form-input"
+                />
+              </FormField>
+              <FormField label="N° Conteneur (TC)">
+                <input
+                  type="text"
+                  value={form.Numero_TC}
+                  onChange={(e) => handleChange('Numero_TC', e.target.value.toUpperCase())}
+                  placeholder="Ex: MSCU1234567"
+                  className="form-input"
+                />
+              </FormField>
+              <FormField label="N° Remorque">
+                <input
+                  type="text"
+                  value={form.Numero_Remorque}
+                  onChange={(e) => handleChange('Numero_Remorque', e.target.value.toUpperCase())}
+                  placeholder="Ex: ABC-1234"
                   className="form-input"
                 />
               </FormField>

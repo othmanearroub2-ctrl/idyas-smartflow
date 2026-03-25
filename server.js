@@ -25,6 +25,8 @@ const dossierSchema = new mongoose.Schema({
   Fournisseur: { type: String, default: '' },
   Client: { type: String, default: '' },
   Transporteur: { type: String, default: '' },
+  Numero_TC: { type: String, default: '' },
+  Numero_Remorque: { type: String, default: '' },
   Lieu_Chargement: { type: String, default: '' },
   Lieu_Dechargement: { type: String, default: '' },
   Mode_Transport: { type: String, default: '' },

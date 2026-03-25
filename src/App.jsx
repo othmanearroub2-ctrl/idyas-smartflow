@@ -157,73 +157,34 @@ function App() {
 
       {/* Header */}
       <header className="relative border-b border-dark-700/50 bg-dark-900/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-3 md:py-4">
+          {/* Row 1: Logo + Nouveau Dossier + User */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               {/* Logo */}
-              <div className="relative">
+              <div className="relative shrink-0">
                 <img 
                   src="/idyas_logo.png" 
                   alt="Idyas Control Tower Logo" 
-                  className="h-12 w-auto object-contain"
+                  className="h-10 md:h-12 w-auto object-contain"
                 />
               </div>
-
-              <div>
-                <h1 className="text-xl font-bold tracking-tight">
+              <div className="min-w-0">
+                <h1 className="text-lg md:text-xl font-bold tracking-tight truncate">
                   <span className="text-white">Idyas</span>{' '}
                   <span className="gradient-text">Control Tower</span>
                 </h1>
-                <p className="text-xs text-dark-400 mt-0.5">
+                <p className="text-xs text-dark-400 mt-0.5 hidden sm:block">
                   Plateforme de suivi logistique — Commissionnaire de transport
                 </p>
               </div>
             </div>
 
-            <div className="hidden md:flex items-center gap-3">
-              {/* Entity management buttons */}
-              <button
-                onClick={() => setEntityModal('fournisseurs')}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium
-                           text-dark-300 bg-dark-700/50 border border-dark-600
-                           hover:bg-violet-500/10 hover:border-violet-500/30 hover:text-violet-400
-                           transition-all duration-200"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
-                </svg>
-                Fournisseurs
-              </button>
-              <button
-                onClick={() => setEntityModal('transporteurs')}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium
-                           text-dark-300 bg-dark-700/50 border border-dark-600
-                           hover:bg-cyan-500/10 hover:border-cyan-500/30 hover:text-cyan-400
-                           transition-all duration-200"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
-                </svg>
-                Transporteurs
-              </button>
-              <button
-                onClick={() => setEntityModal('clients')}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium
-                           text-dark-300 bg-dark-700/50 border border-dark-600
-                           hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-400
-                           transition-all duration-200"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                </svg>
-                Clients
-              </button>
-
-              <div className="w-px h-8 bg-dark-700" />
-
+            <div className="flex items-center gap-2 md:gap-3 shrink-0">
+              {/* Nouveau Dossier - always visible */}
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white
+                className="flex items-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-semibold text-white
                            bg-gradient-to-r from-emerald-500 to-emerald-600
                            hover:from-emerald-400 hover:to-emerald-500
                            shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30
@@ -232,21 +193,26 @@ function App() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
-                Nouveau Dossier
+                <span className="hidden sm:inline">Nouveau</span> Dossier
               </button>
-              <div className="w-px h-10 bg-dark-700" />
-              <div className="text-right">
-                <p className="text-xs text-dark-400 capitalize">{today}</p>
-                <p className="text-xs text-dark-500">v1.0 · ESCA Supply Chain</p>
-              </div>
-              <div className="w-px h-10 bg-dark-700" />
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-bold">
-                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                  <span className="text-sm text-dark-300 font-medium">{user.name || 'Utilisateur'}</span>
+
+              {/* Date - hidden on mobile */}
+              <div className="hidden lg:flex items-center gap-3">
+                <div className="w-px h-10 bg-dark-700" />
+                <div className="text-right">
+                  <p className="text-xs text-dark-400 capitalize">{today}</p>
+                  <p className="text-xs text-dark-500">v1.0 · ESCA Supply Chain</p>
                 </div>
+              </div>
+
+              <div className="w-px h-8 bg-dark-700" />
+
+              {/* User avatar + logout */}
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-bold">
+                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <span className="text-sm text-dark-300 font-medium hidden md:inline">{user.name || 'Utilisateur'}</span>
                 <button
                   onClick={() => setUser(null)}
                   className="p-2 rounded-lg text-dark-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
@@ -258,6 +224,46 @@ function App() {
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Row 2: Entity buttons - scrollable on mobile */}
+          <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
+            <button
+              onClick={() => setEntityModal('fournisseurs')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium shrink-0
+                         text-dark-300 bg-dark-700/50 border border-dark-600
+                         hover:bg-violet-500/10 hover:border-violet-500/30 hover:text-violet-400
+                         transition-all duration-200"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+              </svg>
+              Fournisseurs
+            </button>
+            <button
+              onClick={() => setEntityModal('transporteurs')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium shrink-0
+                         text-dark-300 bg-dark-700/50 border border-dark-600
+                         hover:bg-cyan-500/10 hover:border-cyan-500/30 hover:text-cyan-400
+                         transition-all duration-200"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+              </svg>
+              Transporteurs
+            </button>
+            <button
+              onClick={() => setEntityModal('clients')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium shrink-0
+                         text-dark-300 bg-dark-700/50 border border-dark-600
+                         hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-400
+                         transition-all duration-200"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+              </svg>
+              Clients
+            </button>
           </div>
         </div>
       </header>

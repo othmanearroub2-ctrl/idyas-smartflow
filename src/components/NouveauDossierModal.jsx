@@ -25,6 +25,11 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
     ATD: '',
     ATA: '',
     Documents: [],
+    DocVerif: {
+      PL_Poids: '', PL_Palettes: '', PL_Marchandise: '',
+      CMR_Poids: '', CMR_Palettes: '', CMR_Marchandise: '',
+      BL_Poids: '', BL_Palettes: '', BL_Marchandise: '',
+    },
   };
 
   const [form, setForm] = useState(emptyForm);
@@ -69,7 +74,15 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
   };
 
   const handleChange = (field, value) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+    if (field.startsWith('PL_') || field.startsWith('CMR_') || field.startsWith('BL_')) {
+      // Nested DocVerif field
+      setForm(prev => ({
+        ...prev,
+        DocVerif: { ...prev.DocVerif, [field]: value },
+      }));
+    } else {
+      setForm(prev => ({ ...prev, [field]: value }));
+    }
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }));
   };
 
@@ -483,6 +496,57 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
             </p>
           </div>
 
+          {/* Section: Vérification Documentaire (edit mode only) */}
+          {isEditMode && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-dark-400 mb-3 flex items-center gap-2">
+                <span className="w-5 h-px bg-dark-600" />
+                🔍 Vérification de Conformité Documentaire
+              </h3>
+              <p className="text-xs text-dark-500 mb-4">
+                Saisissez les valeurs de chaque document pour détecter les écarts automatiquement (tolérance ±2% pour le poids).
+              </p>
+
+              {/* Input grid: PL / CMR / BL */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-dark-700/50">
+                      <th className="text-left py-2 px-2 text-dark-400 font-medium">Champ</th>
+                      <th className="text-center py-2 px-2 text-dark-400 font-medium">📋 Packing List</th>
+                      <th className="text-center py-2 px-2 text-dark-400 font-medium">🚛 CMR / BL Route</th>
+                      <th className="text-center py-2 px-2 text-dark-400 font-medium">🚢 B/L Maritime</th>
+                      <th className="text-center py-2 px-2 text-dark-400 font-medium">Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <VerifRow 
+                      label="Poids (kg)"
+                      fields={['PL_Poids', 'CMR_Poids', 'BL_Poids']}
+                      form={form} handleChange={handleChange}
+                      type="weight"
+                    />
+                    <VerifRow 
+                      label="Nb Palettes"
+                      fields={['PL_Palettes', 'CMR_Palettes', 'BL_Palettes']}
+                      form={form} handleChange={handleChange}
+                      type="exact"
+                    />
+                    <VerifRow 
+                      label="Marchandise"
+                      fields={['PL_Marchandise', 'CMR_Marchandise', 'BL_Marchandise']}
+                      form={form} handleChange={handleChange}
+                      type="text"
+                    />
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Global conformity badge */}
+              <ConformityBadge docVerif={form.DocVerif} />
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-dark-700/50">
             <button
@@ -522,3 +586,125 @@ const FormField = ({ label, error, children, fullWidth }) => (
 );
 
 export default NouveauDossierModal;
+
+// --- Verification sub-components ---
+
+const VerifRow = ({ label, fields, form, handleChange, type }) => {
+  const vals = fields.map(f => form.DocVerif?.[f] || '');
+  const filledVals = vals.filter(v => v.toString().trim() !== '');
+
+  let status = 'empty'; // empty | ok | warning | error
+
+  if (filledVals.length >= 2) {
+    if (type === 'weight') {
+      const nums = filledVals.map(v => parseFloat(v)).filter(n => !isNaN(n));
+      if (nums.length >= 2) {
+        const max = Math.max(...nums);
+        const min = Math.min(...nums);
+        const diff = max > 0 ? ((max - min) / max) * 100 : 0;
+        status = diff <= 2 ? 'ok' : diff <= 5 ? 'warning' : 'error';
+      }
+    } else if (type === 'exact') {
+      const allSame = filledVals.every(v => v === filledVals[0]);
+      status = allSame ? 'ok' : 'error';
+    } else {
+      // text comparison (case insensitive)
+      const normalized = filledVals.map(v => v.toString().toLowerCase().trim());
+      const allSame = normalized.every(v => v === normalized[0]);
+      status = allSame ? 'ok' : 'warning';
+    }
+  }
+
+  const statusBadge = {
+    empty: <span className="text-dark-500 text-xs">—</span>,
+    ok: <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">✅ Conforme</span>,
+    warning: <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400">⚠️ Écart</span>,
+    error: <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400">❌ Non conforme</span>,
+  };
+
+  return (
+    <tr className="border-b border-dark-700/20">
+      <td className="py-2 px-2 text-dark-300 font-medium">{label}</td>
+      {fields.map(f => (
+        <td key={f} className="py-2 px-1">
+          <input
+            type={type === 'text' ? 'text' : 'text'}
+            value={form.DocVerif?.[f] || ''}
+            onChange={(e) => handleChange(f, e.target.value)}
+            placeholder={type === 'weight' ? 'kg' : type === 'exact' ? '0' : '...'}
+            className="w-full bg-dark-900/60 border border-dark-600 rounded-lg px-2 py-1.5 text-xs text-dark-200 text-center
+                       placeholder-dark-500 focus:outline-none focus:ring-1 focus:ring-primary-500/40 focus:border-primary-500/50 transition-all"
+          />
+        </td>
+      ))}
+      <td className="py-2 px-2 text-center">{statusBadge[status]}</td>
+    </tr>
+  );
+};
+
+const ConformityBadge = ({ docVerif }) => {
+  if (!docVerif) return null;
+
+  const checks = [
+    { fields: ['PL_Poids', 'CMR_Poids', 'BL_Poids'], type: 'weight' },
+    { fields: ['PL_Palettes', 'CMR_Palettes', 'BL_Palettes'], type: 'exact' },
+  ];
+
+  let hasData = false;
+  let hasError = false;
+  let hasWarning = false;
+
+  checks.forEach(({ fields, type }) => {
+    const vals = fields.map(f => docVerif[f] || '').filter(v => v.toString().trim() !== '');
+    if (vals.length >= 2) {
+      hasData = true;
+      if (type === 'weight') {
+        const nums = vals.map(v => parseFloat(v)).filter(n => !isNaN(n));
+        if (nums.length >= 2) {
+          const max = Math.max(...nums);
+          const min = Math.min(...nums);
+          const diff = max > 0 ? ((max - min) / max) * 100 : 0;
+          if (diff > 5) hasError = true;
+          else if (diff > 2) hasWarning = true;
+        }
+      } else {
+        const allSame = vals.every(v => v === vals[0]);
+        if (!allSame) hasError = true;
+      }
+    }
+  });
+
+  if (!hasData) return null;
+
+  if (hasError) {
+    return (
+      <div className="mt-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
+        <span className="text-lg">❌</span>
+        <div>
+          <p className="text-sm font-semibold text-red-400">Non conforme — Écarts détectés</p>
+          <p className="text-xs text-red-400/70">Des différences significatives ont été trouvées entre les documents. Vérifiez avant expédition.</p>
+        </div>
+      </div>
+    );
+  }
+  if (hasWarning) {
+    return (
+      <div className="mt-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+        <span className="text-lg">⚠️</span>
+        <div>
+          <p className="text-sm font-semibold text-amber-400">Écart mineur détecté</p>
+          <p className="text-xs text-amber-400/70">Des différences mineures existent (entre 2% et 5%). À vérifier.</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+      <span className="text-lg">✅</span>
+      <div>
+        <p className="text-sm font-semibold text-emerald-400">Conformité documentaire : OK</p>
+        <p className="text-xs text-emerald-400/70">Tous les documents sont alignés. Aucun écart significatif détecté.</p>
+      </div>
+    </div>
+  );
+};

@@ -42,7 +42,8 @@ const dossierSchema = new mongoose.Schema({
   ATA: { type: String, default: '' },
   Retard_Calcule: { type: Number, default: 0 },
   Fiabilite_Transporteur: { type: Number, default: 100 },
-  Status: { type: String, default: 'En attente' }
+  Status: { type: String, default: 'En attente' },
+  Documents: { type: [{ name: String, addedAt: String }], default: [] }
 }, { timestamps: true });
 
 const Dossier = mongoose.model('Dossier', dossierSchema);
@@ -88,7 +89,7 @@ app.post('/api/dossiers', async (req, res) => {
       delayDays = calculateDelayDays(newDossierData.ETA, newDossierData.ATA);
     }
     
-    newDossierData.Retard_Calcule = Math.max(0, delayDays); // Pas de retard négatif, ou garder négatif pour "en avance"
+    newDossierData.Retard_Calcule = Math.max(0, delayDays);
     newDossierData.Status = determineStatus(
       newDossierData.ETD, 
       newDossierData.ATD, 
@@ -107,6 +108,42 @@ app.post('/api/dossiers', async (req, res) => {
   } catch (error) {
     console.error('Erreur POST /api/dossiers:', error);
     res.status(500).json({ error: 'Échec de la sauvegarde du dossier' });
+  }
+});
+
+// PUT — Modifier un dossier existant
+app.put('/api/dossiers/:id', async (req, res) => {
+  try {
+    const updateData = req.body;
+    
+    let delayDays = 0;
+    if (updateData.ETA && updateData.ATA) {
+      delayDays = calculateDelayDays(updateData.ETA, updateData.ATA);
+    }
+    
+    updateData.Retard_Calcule = Math.max(0, delayDays);
+    updateData.Status = determineStatus(
+      updateData.ETD, 
+      updateData.ATD, 
+      updateData.ETA, 
+      updateData.ATA, 
+      delayDays
+    );
+
+    const dossier = await Dossier.findOneAndUpdate(
+      { ID_Dossier: req.params.id },
+      updateData,
+      { new: true }
+    );
+    
+    if (!dossier) {
+      return res.status(404).json({ error: 'Dossier non trouvé' });
+    }
+    
+    res.json({ message: 'Dossier modifié avec succès', dossier });
+  } catch (error) {
+    console.error('Erreur PUT /api/dossiers:', error);
+    res.status(500).json({ error: 'Échec de la modification du dossier' });
   }
 });
 

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [], transporteurs = [], clients = [] }) => {
+const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [], transporteurs = [], clients = [], editDossier = null }) => {
   const modalRef = useRef(null);
-  const [form, setForm] = useState({
+
+  const emptyForm = {
     ID_Dossier: '',
     Type_Operation: '',
     Fournisseur: '',
@@ -21,36 +22,35 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
     Volume: '',
     ETD: '',
     ETA: '',
-  });
+    ATD: '',
+    ATA: '',
+    Documents: [],
+  };
 
+  const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
+  const [newDocName, setNewDocName] = useState('');
+
+  const isEditMode = !!editDossier;
 
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setForm({
-        ID_Dossier: nextId,
-        Type_Operation: '',
-        Fournisseur: '',
-        Client: '',
-        Transporteur: '',
-        Numero_TC: '',
-        Numero_Remorque: '',
-        Lieu_Chargement: '',
-        Lieu_Dechargement: '',
-        Mode_Transport: '',
-        Type_Envoi: '',
-        Incoterm: '',
-        Marchandise: '',
-        Nombre_Palettes: '',
-        Poids_Brut: '',
-        Volume: '',
-        ETD: '',
-        ETA: '',
-      });
+      if (editDossier) {
+        // Edit mode: pre-fill form with existing dossier data
+        setForm({
+          ...emptyForm,
+          ...editDossier,
+          Documents: editDossier.Documents || [],
+        });
+      } else {
+        // Create mode: empty form with next ID
+        setForm({ ...emptyForm, ID_Dossier: nextId });
+      }
       setErrors({});
+      setNewDocName('');
     }
-  }, [isOpen, nextId]);
+  }, [isOpen, nextId, editDossier]);
 
   // Close on Escape
   useEffect(() => {
@@ -73,6 +73,24 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }));
   };
 
+  // --- Document management ---
+  const handleAddDocument = () => {
+    const name = newDocName.trim();
+    if (!name) return;
+    setForm(prev => ({
+      ...prev,
+      Documents: [...prev.Documents, { name, addedAt: new Date().toISOString() }],
+    }));
+    setNewDocName('');
+  };
+
+  const handleRemoveDocument = (index) => {
+    setForm(prev => ({
+      ...prev,
+      Documents: prev.Documents.filter((_, i) => i !== index),
+    }));
+  };
+
   const validate = () => {
     const newErrors = {};
     const required = ['ID_Dossier', 'Fournisseur', 'Client', 'Transporteur', 'Mode_Transport', 'Type_Envoi', 'Incoterm', 'ETD'];
@@ -87,20 +105,24 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
     e.preventDefault();
     if (!validate()) return;
 
-    const newDossier = {
-      ...form,
-      ATD: null,
-      ATA: null,
-      Retard_Calcule: null,
-      Fiabilite_Transporteur: 90, // default for new carrier
-    };
-    onSave(newDossier);
+    if (isEditMode) {
+      // Edit mode: send updated dossier
+      onSave(form, true); // true = isEdit
+    } else {
+      // Create mode
+      const newDossier = {
+        ...form,
+        ATD: form.ATD || null,
+        ATA: form.ATA || null,
+        Retard_Calcule: null,
+        Fiabilite_Transporteur: 90,
+      };
+      onSave(newDossier, false);
+    }
     onClose();
   };
 
   if (!isOpen) return null;
-
-  const lieuxDechargement = ['Port Casablanca', 'Tanger Med', 'Aéroport Mohammed V, Casa'];
 
   return (
     <div
@@ -118,14 +140,20 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-5 border-b border-dark-700/50 bg-dark-800/95 backdrop-blur-xl rounded-t-2xl">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500/20 to-primary-500/20">
-              <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
+            <div className={`p-2.5 rounded-xl bg-gradient-to-br ${isEditMode ? 'from-amber-500/20 to-orange-500/20' : 'from-emerald-500/20 to-primary-500/20'}`}>
+              {isEditMode ? (
+                <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              )}
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Nouveau Dossier</h2>
-              <p className="text-xs text-dark-400">Créer un nouveau dossier d'exploitation</p>
+              <h2 className="text-lg font-bold text-white">{isEditMode ? 'Modifier le Dossier' : 'Nouveau Dossier'}</h2>
+              <p className="text-xs text-dark-400">{isEditMode ? `Modification de ${form.ID_Dossier}` : "Créer un nouveau dossier d'exploitation"}</p>
             </div>
           </div>
           <button
@@ -154,6 +182,7 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
                   onChange={(e) => handleChange('ID_Dossier', e.target.value)}
                   placeholder="IDY-2026-XXX"
                   className="form-input"
+                  disabled={isEditMode}
                 />
               </FormField>
               <FormField label="Import / Export" error={errors.Type_Operation}>
@@ -348,7 +377,7 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-dark-400 mb-3 flex items-center gap-2">
               <span className="w-5 h-px bg-dark-600" />
-              Dates Prévisionnelles
+              Dates {isEditMode ? '' : 'Prévisionnelles'}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField label="ETD — Départ Prévu" error={errors.ETD}>
@@ -367,9 +396,90 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
                   className="form-input"
                 />
               </FormField>
+              {isEditMode && (
+                <>
+                  <FormField label="ATD — Départ Réel">
+                    <input
+                      type="date"
+                      value={form.ATD || ''}
+                      onChange={(e) => handleChange('ATD', e.target.value)}
+                      className="form-input"
+                    />
+                  </FormField>
+                  <FormField label="ATA — Arrivée Réelle">
+                    <input
+                      type="date"
+                      value={form.ATA || ''}
+                      onChange={(e) => handleChange('ATA', e.target.value)}
+                      className="form-input"
+                    />
+                  </FormField>
+                </>
+              )}
+            </div>
+            {!isEditMode && (
+              <p className="text-xs text-dark-500 mt-2 italic">
+                Les dates réelles (ATD/ATA) seront renseignées lors de la modification du dossier.
+              </p>
+            )}
+          </div>
+
+          {/* Section: Documents */}
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-dark-400 mb-3 flex items-center gap-2">
+              <span className="w-5 h-px bg-dark-600" />
+              Documents Attachés
+            </h3>
+            
+            {/* Document list */}
+            {form.Documents && form.Documents.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {form.Documents.map((doc, i) => (
+                  <div key={i} className="flex items-center justify-between px-3 py-2 rounded-xl bg-dark-900/50 border border-dark-700/50">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                      </svg>
+                      <span className="text-sm text-dark-200">{doc.name}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveDocument(i)}
+                      className="p-1 rounded-lg hover:bg-red-500/10 text-dark-500 hover:text-red-400 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add new document */}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={newDocName}
+                onChange={(e) => setNewDocName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddDocument(); } }}
+                placeholder="Nom du document (BL, CMR, Facture, Packing List...)"
+                className="form-input flex-1"
+              />
+              <button
+                type="button"
+                onClick={handleAddDocument}
+                className="px-4 py-2.5 rounded-xl text-sm font-medium text-primary-400 bg-primary-500/10 border border-primary-500/30
+                           hover:bg-primary-500/20 transition-all duration-200 shrink-0 flex items-center gap-1.5"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Ajouter
+              </button>
             </div>
             <p className="text-xs text-dark-500 mt-2 italic">
-              Les dates réelles (ATD/ATA) seront renseignées automatiquement lors du suivi.
+              Ex: BL, CMR, Facture commerciale, Certificate d'origine, Packing List, DUM...
             </p>
           </div>
 
@@ -385,16 +495,15 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white
-                         bg-gradient-to-r from-emerald-500 to-emerald-600
-                         hover:from-emerald-400 hover:to-emerald-500
-                         shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30
-                         transition-all duration-200 flex items-center gap-2"
+              className={`px-6 py-2.5 rounded-xl text-sm font-semibold text-white
+                         bg-gradient-to-r ${isEditMode ? 'from-amber-500 to-orange-500 shadow-amber-500/20 hover:shadow-amber-500/30 hover:from-amber-400 hover:to-orange-400' : 'from-emerald-500 to-emerald-600 shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:from-emerald-400 hover:to-emerald-500'}
+                         shadow-lg
+                         transition-all duration-200 flex items-center gap-2`}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
-              Enregistrer le dossier
+              {isEditMode ? 'Sauvegarder les modifications' : 'Enregistrer le dossier'}
             </button>
           </div>
         </form>

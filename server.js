@@ -43,7 +43,18 @@ const dossierSchema = new mongoose.Schema({
   Retard_Calcule: { type: Number, default: 0 },
   Fiabilite_Transporteur: { type: Number, default: 100 },
   Status: { type: String, default: 'En attente' },
-  Documents: { type: [{ name: String, addedAt: String }], default: [] }
+  Documents: { type: [{ name: String, addedAt: String }], default: [] },
+  DocVerif: {
+    PL_Poids: { type: String, default: '' },
+    PL_Palettes: { type: String, default: '' },
+    PL_Marchandise: { type: String, default: '' },
+    CMR_Poids: { type: String, default: '' },
+    CMR_Palettes: { type: String, default: '' },
+    CMR_Marchandise: { type: String, default: '' },
+    BL_Poids: { type: String, default: '' },
+    BL_Palettes: { type: String, default: '' },
+    BL_Marchandise: { type: String, default: '' }
+  }
 }, { timestamps: true });
 
 const Dossier = mongoose.model('Dossier', dossierSchema);

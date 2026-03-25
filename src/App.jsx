@@ -18,6 +18,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [allDossiers, setAllDossiers] = useState(initialDossiers);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editDossier, setEditDossier] = useState(null);
   const [loading, setLoading] = useState(false);
   const [entityModal, setEntityModal] = useState(null); // 'fournisseurs' | 'transporteurs' | 'clients' | null
 
@@ -92,22 +93,41 @@ function App() {
     fetchDossiers();
   }, [fetchDossiers]);
 
-  // Add new dossier — POST to API then refresh
-  const handleSaveDossier = useCallback(async (newDossier) => {
+  // Save dossier — POST (create) or PUT (edit)
+  const handleSaveDossier = useCallback(async (dossierData, isEdit = false) => {
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newDossier),
-      });
-      if (!response.ok) throw new Error('POST failed');
-      // Refresh list from API after saving
+      if (isEdit) {
+        // PUT — update existing
+        const url = API_URL.replace('/api/dossiers', '') + '/api/dossiers/' + dossierData.ID_Dossier;
+        const response = await fetch(url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dossierData),
+        });
+        if (!response.ok) throw new Error('PUT failed');
+      } else {
+        // POST — create new
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dossierData),
+        });
+        if (!response.ok) throw new Error('POST failed');
+      }
       await fetchDossiers();
     } catch (error) {
-      console.warn('⚠️ POST échoué, ajout local uniquement:', error.message);
-      setAllDossiers(prev => [newDossier, ...prev]);
+      console.warn('⚠️ Sauvegarde échouée:', error.message);
+      if (!isEdit) {
+        setAllDossiers(prev => [dossierData, ...prev]);
+      }
     }
   }, [fetchDossiers]);
+
+  // Open edit modal
+  const handleEditDossier = useCallback((dossier) => {
+    setEditDossier(dossier);
+    setIsModalOpen(true);
+  }, []);
 
   // Filtered data
   const filteredData = useMemo(() => {
@@ -289,7 +309,7 @@ function App() {
 
         {/* Main Table */}
         <section>
-          <DossierTable data={filteredData} />
+          <DossierTable data={filteredData} onEdit={handleEditDossier} />
         </section>
 
         {/* Focus Maroc */}
@@ -308,15 +328,16 @@ function App() {
         </footer>
       </main>
 
-      {/* Modal Nouveau Dossier */}
+      {/* Modal Nouveau Dossier / Modifier Dossier */}
       <NouveauDossierModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => { setIsModalOpen(false); setEditDossier(null); }}
         onSave={handleSaveDossier}
         nextId={nextId}
         fournisseurs={fournisseursList}
         transporteurs={transporteursList}
         clients={clientsList}
+        editDossier={editDossier}
       />
 
       {/* Gestion des entités */}

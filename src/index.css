@@ -4,6 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide scrollbar for mobile horizontal scroll */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
 @layer base {
   * {
     margin: 0;

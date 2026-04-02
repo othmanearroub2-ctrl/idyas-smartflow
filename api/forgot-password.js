@@ -45,14 +45,18 @@ export default async function handler(req, res) {
       subject: 'Réinitialisation de votre mot de passe - Idyas Shipping 🚢',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
-          <h2 style="color: #0d9488;">Réinitialisation de mot de passe</h2>
+          <h2 style="color: #0d9488;">Récupération de mot de passe</h2>
           <p>Bonjour Othmane,</p>
-          <p>Vous avez demandé une réinitialisation de votre mot de passe pour la plateforme <strong>Idyas Control Tower</strong>.</p>
-          <p>Pour des raisons de sécurité, veuillez contacter le support technique ou utiliser le lien temporaire ci-dessous :</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="#" style="background-color: #0d9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Réinitialiser mon mot de passe</a>
+          <p>Vous avez demandé une récupération de votre mot de passe pour la plateforme <strong>Idyas Control Tower</strong>.</p>
+          <p>Puisque vous êtes l'Administrateur principal, voici vos identifiants d'accès actuels :</p>
+          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #0d9488;">
+            <p style="margin: 0;"><strong>Email :</strong> ${email}</p>
+            <p style="margin: 5px 0 0 0;"><strong>Mot de passe :</strong> IDYAS2026</p>
           </div>
-          <p style="font-size: 12px; color: #6b7280;">Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email en toute sécurité.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://idyas-smartflow.vercel.app/" style="background-color: #0d9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Retourner à la plateforme</a>
+          </div>
+          <p style="font-size: 12px; color: #6b7280;">Ce message est généré automatiquement par votre serveur Vercel.</p>
           <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
           <p style="font-size: 12px; color: #9ca3af; text-align: center;">© 2026 Idyas Shipping · Control Tower</p>
         </div>

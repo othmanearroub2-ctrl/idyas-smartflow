@@ -28,29 +28,87 @@ function App() {
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false); // Freight calculator state
   const [entityModal, setEntityModal] = useState(null); // 'fournisseurs' | 'transporteurs' | 'clients' | null
 
-  // Dynamic entity lists (empty — user adds their own)
+  // Dynamic entity lists
   const [fournisseursList, setFournisseursList] = useState([]);
   const [transporteursList, setTransporteursList] = useState([]);
   const [clientsList, setClientsList] = useState([]);
+
+  // Load entities from backend
+  useEffect(() => {
+    const fetchEntities = async () => {
+      try {
+        const baseUrl = API_URL.replace('/api/dossiers', '/api/entities');
+        const res = await fetch(baseUrl);
+        const data = await res.json();
+        const f = data.find(e => e.type === 'fournisseurs');
+        if (f) setFournisseursList(f.items);
+        const t = data.find(e => e.type === 'transporteurs');
+        if (t) setTransporteursList(t.items);
+        const c = data.find(e => e.type === 'clients');
+        if (c) setClientsList(c.items);
+      } catch (err) {
+        console.warn('Erreur chargement entités', err);
+      }
+    };
+    if (user) fetchEntities();
+  }, [user]);
+
+  const saveEntityList = async (type, items) => {
+    try {
+      const baseUrl = API_URL.replace('/api/dossiers', `/api/entities/${type}`);
+      await fetch(baseUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items })
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Generic add/delete handlers
   const entityHandlers = useMemo(() => ({
     fournisseurs: {
       items: fournisseursList,
-      onAdd: (name) => setFournisseursList(prev => [...prev, name].sort()),
-      onDelete: (name) => setFournisseursList(prev => prev.filter(f => f !== name)),
+      onAdd: (name) => {
+        const next = [...fournisseursList, name].sort();
+        setFournisseursList(next);
+        saveEntityList('fournisseurs', next);
+      },
+      onDelete: (name) => {
+        const next = fournisseursList.filter(f => f !== name);
+        setFournisseursList(next);
+        saveEntityList('fournisseurs', next);
+      },
     },
     transporteurs: {
       items: transporteursList,
-      onAdd: (name) => setTransporteursList(prev => [...prev, name].sort()),
-      onDelete: (name) => setTransporteursList(prev => prev.filter(f => f !== name)),
+      onAdd: (name) => {
+        const next = [...transporteursList, name].sort();
+        setTransporteursList(next);
+        saveEntityList('transporteurs', next);
+      },
+      onDelete: (name) => {
+        const next = transporteursList.filter(f => f !== name);
+        setTransporteursList(next);
+        saveEntityList('transporteurs', next);
+      },
     },
     clients: {
       items: clientsList,
-      onAdd: (name) => setClientsList(prev => [...prev, name].sort()),
-      onDelete: (name) => setClientsList(prev => prev.filter(f => f !== name)),
+      onAdd: (name) => {
+        const next = [...clientsList, name].sort();
+        setClientsList(next);
+        saveEntityList('clients', next);
+      },
+      onDelete: (name) => {
+        const next = clientsList.filter(f => f !== name);
+        setClientsList(next);
+        saveEntityList('clients', next);
+      },
     },
   }), [fournisseursList, transporteursList, clientsList]);
+
   const [filters, setFilters] = useState({
     search: '',
     fournisseur: '',

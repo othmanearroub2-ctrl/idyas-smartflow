@@ -63,6 +63,13 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
+const entitySchema = new mongoose.Schema({
+  type: { type: String, required: true, unique: true }, // 'fournisseurs', 'transporteurs', 'clients'
+  items: { type: [String], default: [] }
+});
+
+const Entity = mongoose.model('Entity', entitySchema);
+
 const dossierSchema = new mongoose.Schema({
   ID_Dossier: { type: String, required: true, unique: true },
   Facture_No: { type: String, default: '' },
@@ -156,8 +163,33 @@ const determineStatus = (etd, atd, eta, ata, delayDays) => {
   }
   return 'En attente';
 };
-
 // --- Routes ---
+app.get('/api/entities', async (req, res) => {
+  try {
+    const Entity = mongoose.model('Entity');
+    const entities = await Entity.find();
+    res.json(entities);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la récupération des entités' });
+  }
+});
+
+app.post('/api/entities/:type', async (req, res) => {
+  try {
+    const Entity = mongoose.model('Entity');
+    const type = req.params.type;
+    const { items } = req.body;
+    let entity = await Entity.findOne({ type });
+    if (!entity) {
+      entity = new Entity({ type, items: [] });
+    }
+    entity.items = items;
+    await entity.save();
+    res.json(entity);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la sauvegarde de l\'entité' });
+  }
+});
 app.get('/api/dossiers', async (req, res) => {
   try {
     const dossiers = await Dossier.find().sort({ createdAt: -1 });

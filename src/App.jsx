@@ -6,6 +6,7 @@ import FocusMaroc from './components/FocusMaroc';
 import NouveauDossierModal from './components/NouveauDossierModal';
 import GestionEntites from './components/GestionEntites';
 import LoginPage from './components/LoginPage';
+import ResetPassword from './components/ResetPassword';
 import DossierDetailView from './components/DossierDetailView';
 import FreightCalculator from './components/FreightCalculator';
 import {
@@ -211,6 +212,22 @@ function App() {
     month: 'long',
     day: 'numeric',
   });
+
+  // Check for reset password token in URL
+  const resetToken = new URLSearchParams(window.location.search).get('reset_token');
+
+  if (resetToken && !user) {
+    return (
+      <ResetPassword 
+        token={resetToken} 
+        onReturnToLogin={() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          // Rerender main app by forcing it to just reload
+          window.location.reload(); 
+        }} 
+      />
+    );
+  }
 
   // If not authenticated, show login
   if (!user) {

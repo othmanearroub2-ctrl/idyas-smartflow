@@ -16,7 +16,20 @@ app.use(express.json());
 
 // --- MongoDB Connexion ---
 mongoose.connect(process.env.MONGODB_URI)
-.then(() => console.log('✅ Connecté à MongoDB Atlas'))
+.then(async () => {
+  console.log('✅ Connecté à MongoDB Atlas');
+  // Seed admin user
+  const adminEmail = 'othmanearroub2@gmail.com';
+  const User = mongoose.model('User');
+  const existingAdmin = await User.findOne({ email: adminEmail });
+  if (!existingAdmin) {
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('IDYAS2026', salt);
+    await User.create({ email: adminEmail, password: hashedPassword });
+    console.log('🔑 Utilisateur admin initialisé en base de données.');
+  }
+})
 .catch(err => console.error('❌ Erreur de connexion MongoDB :', err));
 
 // --- Nodemailer Configuration ---
@@ -37,7 +50,19 @@ transporter.verify((error, success) => {
   }
 });
 
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+
 // --- Mongoose Schema & Model ---
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true }, // Hashed
+  resetPasswordToken: String,
+  resetPasswordExpire: Date,
+});
+
+const User = mongoose.model('User', userSchema);
+
 const dossierSchema = new mongoose.Schema({
   ID_Dossier: { type: String, required: true, unique: true },
   Facture_No: { type: String, default: '' },
@@ -226,44 +251,81 @@ app.patch('/api/dossiers/:id/archive', async (req, res) => {
 });
 
 // --- Auth Routes ---
-app.post('/api/forgot-password', async (req, res) => {
-  const { email } = req.body;
-
-  if (!email) {
-    return res.status(400).json({ error: 'Email requis' });
-  }
-
-  // Pour le moment, seul l'admin peut réinitialiser (Sécurité simple)
-  if (email.toLowerCase() !== 'othmanearroub2@gmail.com') {
-    return res.status(403).json({ error: 'Cet email n\'est pas autorisé pour la réinitialisation.' });
-  }
-
+app.post('/api/login', async (req, res) => {
   try {
-    const mailOptions = {
-      from: `"Idyas Control Tower" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: 'Réinitialisation de votre mot de passe - Idyas Shipping 🚢',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
-          <h2 style="color: #0d9488;">Réinitialisation de mot de passe</h2>
-          <p>Bonjour Othmane,</p>
-          <p>Vous avez demandé une réinitialisation de votre mot de passe pour la plateforme <strong>Idyas Control Tower</strong>.</p>
-          <p>Pour des raisons de sécurité, veuillez contacter le support technique ou utiliser le lien temporaire ci-dessous :</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="#" style="background-color: #0d9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Réinitialiser mon mot de passe</a>
-          </div>
-          <p style="font-size: 12px; color: #6b7280;">Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email en toute sécurité.</p>
-          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
-          <p style="font-size: 12px; color: #9ca3af; text-align: center;">© 2026 Idyas Shipping · Control Tower v1.0</p>
-        </div>
-      `,
-    };
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email et mot de passe requis' });
 
-    await transporter.sendMail(mailOptions);
-    res.json({ message: 'Email de récupération envoyé avec succès' });
+    const User = mongoose.model('User');
+    const user = await User.findOne({ email: email.toLowerCase() });
+    
+    if (!user) return res.status(401).json({ error: 'Utilisateur non trouvé' });
+    
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ error: 'Mot de passe incorrect' });
+    
+    res.json({ message: 'Connexion réussie', user: { email: user.email, name: 'Administrateur' } });
   } catch (error) {
-    console.error('Erreur envoi email:', error);
-    res.status(500).json({ error: "Échec de l'envoi de l'email. Vérifiez vos identifiants d'application Gmail." });
+    res.status(500).json({ error: 'Erreur serveur lors de la connexion' });
+  }
+});
+
+app.post('/api/generate-reset-token', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email requis' });
+
+    const User = mongoose.model('User');
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(404).json({ error: 'Cet email n\'existe pas.' });
+
+    // Generate random token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    // Hash token for saving in DB (security best practice)
+    const resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes expiration
+
+    user.resetPasswordToken = resetPasswordToken;
+    user.resetPasswordExpire = resetPasswordExpire;
+    await user.save();
+
+    // Return the raw token (to be sent in the email by Vercel)
+    res.json({ token: resetToken });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la génération du token' });
+  }
+});
+
+app.post('/api/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ error: 'Token et nouveau mot de passe requis' });
+
+    const resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const User = mongoose.model('User');
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() } // Token must not be expired
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Le lien de réinitialisation est invalide ou a expiré' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    
+    // Clear reset tokens
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    
+    await user.save();
+
+    res.json({ message: 'Mot de passe mis à jour avec succès' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur serveur lors de la réinitialisation' });
   }
 });
 

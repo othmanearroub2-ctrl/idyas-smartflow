@@ -31,6 +31,31 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Demander au backend Render de générer un Token sécurisé
+    const renderApiUrl = process.env.VITE_API_URL 
+      ? process.env.VITE_API_URL.replace('/api/dossiers', '/api/generate-reset-token')
+      : 'https://idyas-smartflow.onrender.com/api/generate-reset-token';
+
+    const renderResponse = await fetch(renderApiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await renderResponse.json();
+
+    if (!renderResponse.ok) {
+      return res.status(renderResponse.status).json({ error: data.error || 'Erreur lors de la génération du token' });
+    }
+
+    const resetToken = data.token;
+    
+    // Créer le lien dynamique de réinitialisation
+    // Note: Vercel nous informe de notre propre hôte (host)
+    const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
+    const host = req.headers.host || 'idyas-smartflow.vercel.app';
+    const resetUrl = `${protocol}://${host}?reset_token=${resetToken}`;
+
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -45,18 +70,14 @@ export default async function handler(req, res) {
       subject: 'Réinitialisation de votre mot de passe - Idyas Shipping 🚢',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
-          <h2 style="color: #0d9488;">Récupération de mot de passe</h2>
+          <h2 style="color: #0d9488;">Réinitialisation de mot de passe</h2>
           <p>Bonjour Othmane,</p>
-          <p>Vous avez demandé une récupération de votre mot de passe pour la plateforme <strong>Idyas Control Tower</strong>.</p>
-          <p>Puisque vous êtes l'Administrateur principal, voici vos identifiants d'accès actuels :</p>
-          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #0d9488;">
-            <p style="margin: 0;"><strong>Email :</strong> ${email}</p>
-            <p style="margin: 5px 0 0 0;"><strong>Mot de passe :</strong> IDYAS2026</p>
-          </div>
+          <p>Vous avez demandé la réinitialisation de votre mot de passe pour la plateforme <strong>Idyas Control Tower</strong>.</p>
+          <p>Pour des raisons de sécurité, ce lien n'est valide que pendant <strong>15 minutes</strong>.</p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://idyas-smartflow.vercel.app/" style="background-color: #0d9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Retourner à la plateforme</a>
+            <a href="${resetUrl}" style="background-color: #0d9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Définir un nouveau mot de passe</a>
           </div>
-          <p style="font-size: 12px; color: #6b7280;">Ce message est généré automatiquement par votre serveur Vercel.</p>
+          <p style="font-size: 12px; color: #6b7280;">Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email en toute sécurité.</p>
           <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
           <p style="font-size: 12px; color: #9ca3af; text-align: center;">© 2026 Idyas Shipping · Control Tower</p>
         </div>
@@ -64,9 +85,9 @@ export default async function handler(req, res) {
     };
 
     await transporter.sendMail(mailOptions);
-    return res.status(200).json({ message: 'Email de récupération envoyé via Vercel avec succès' });
+    return res.status(200).json({ message: 'Email envoyé avec les instructions' });
   } catch (error) {
     console.error('Erreur Vercel envoi email:', error);
-    return res.status(500).json({ error: "Échec de l'envoi de l'email. Vérifiez vos identifiants d'application Gmail." });
+    return res.status(500).json({ error: "Échec de l'envoi de l'email." });
   }
 }

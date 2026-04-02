@@ -19,12 +19,27 @@ const LoginPage = ({ onLogin }) => {
     }
 
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 800));
 
-    if (email === 'othmanearroub2@gmail.com' && password === 'IDYAS2026') {
-      onLogin({ email, name: 'Othmane Arroub' });
-    } else {
-      setError('Email ou mot de passe incorrect.');
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/dossiers';
+      const loginUrl = baseUrl.replace('/api/dossiers', '/api/login');
+
+      const response = await fetch(loginUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la connexion');
+      }
+
+      onLogin(data.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
       setIsLoading(false);
     }
   };

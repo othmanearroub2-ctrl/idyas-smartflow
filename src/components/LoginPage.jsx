@@ -40,8 +40,8 @@ const LoginPage = ({ onLogin }) => {
     setError('');
 
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/dossiers';
-      const forgotUrl = baseUrl.replace('/api/dossiers', '/api/forgot-password');
+      // Utilisation directe de la fonction Serverless Vercel (contourne le blocage Render)
+      const forgotUrl = '/api/forgot-password';
 
       const response = await fetch(forgotUrl, {
         method: 'POST',

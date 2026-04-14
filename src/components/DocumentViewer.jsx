@@ -15,8 +15,8 @@ const DocumentViewer = ({ doc, onClose }) => {
     }
   };
 
-  // For PDFs, use Google Docs Viewer as fallback if direct iframe fails
-  const pdfViewerUrl = doc.url;
+  // Use Google Docs Viewer to display PDFs (Cloudinary blocks direct iframe embedding)
+  const pdfViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true`;
 
   return (
     <div
@@ -82,7 +82,7 @@ const DocumentViewer = ({ doc, onClose }) => {
           {isPdf ? (
             <iframe
               src={pdfViewerUrl}
-              className="w-full h-full border-0"
+              className="w-full h-full border-0 bg-white"
               title={doc.name}
               allow="fullscreen"
             />

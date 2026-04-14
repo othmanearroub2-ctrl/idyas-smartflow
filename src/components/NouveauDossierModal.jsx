@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PHASES } from '../data/mockData';
+import DocumentViewer from './DocumentViewer';
 
 const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [], transporteurs = [], clients = [], editDossier = null }) => {
   const modalRef = useRef(null);
@@ -70,6 +71,7 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
   const [newDocName, setNewDocName] = useState('');
   const [newDocUrl, setNewDocUrl] = useState('');
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [viewingDoc, setViewingDoc] = useState(null);
   const fileInputRef = useRef(null);
 
   const isEditMode = !!editDossier;
@@ -162,12 +164,20 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
       if (!res.ok) throw new Error('Erreur upload Cloudinary');
       
       const data = await res.json();
-      const fileUrl = data.secure_url;
+      let fileUrl = data.secure_url;
       const fileName = file.name;
+
+      // Fix Cloudinary URL for non-image files (PDF, DOCX, etc.)
+      // Cloudinary returns /image/upload/ but PDFs need /raw/upload/ to be viewable
+      const ext = fileName.split('.').pop().toLowerCase();
+      const isRawFile = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip'].includes(ext);
+      if (isRawFile && fileUrl.includes('/image/upload/')) {
+        fileUrl = fileUrl.replace('/image/upload/', '/raw/upload/');
+      }
 
       setForm(prev => ({
         ...prev,
-        Documents: [...prev.Documents, { name: newDocName.trim() || fileName, url: fileUrl, addedAt: new Date().toISOString() }],
+        Documents: [...prev.Documents, { name: newDocName.trim() || fileName, url: fileUrl, type: ext, addedAt: new Date().toISOString() }],
       }));
       setNewDocName('');
       setNewDocUrl('');
@@ -650,26 +660,47 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
                 {form.Documents.map((doc, i) => (
                   <div key={i} className="flex items-center justify-between px-3 py-2 rounded-xl bg-dark-900/50 border border-dark-700/50">
                     <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-primary-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <svg className={`w-4 h-4 shrink-0 ${(doc.type || doc.url?.split('.').pop()?.toLowerCase()) === 'pdf' ? 'text-red-400' : 'text-primary-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                       </svg>
                       {doc.url ? (
-                        <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-400 hover:text-primary-300 hover:underline truncate max-w-[300px]" title={doc.url}>
+                        <button
+                          type="button"
+                          onClick={() => setViewingDoc(doc)}
+                          className="text-sm text-primary-400 hover:text-primary-300 hover:underline truncate max-w-[300px] text-left"
+                          title="Cliquer pour visualiser"
+                        >
                           {doc.name}
-                        </a>
+                        </button>
                       ) : (
                         <span className="text-sm text-dark-200 truncate max-w-[300px]">{doc.name}</span>
                       )}
+                      <span className="text-[10px] text-dark-500 uppercase">{doc.type || ''}</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveDocument(i)}
-                      className="p-1 rounded-lg hover:bg-red-500/10 text-dark-500 hover:text-red-400 transition-colors shrink-0"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="flex items-center gap-1">
+                      {doc.url && (
+                        <button
+                          type="button"
+                          onClick={() => setViewingDoc(doc)}
+                          className="p-1 rounded-lg hover:bg-primary-500/10 text-dark-500 hover:text-primary-400 transition-colors shrink-0"
+                          title="Visualiser"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDocument(i)}
+                        className="p-1 rounded-lg hover:bg-red-500/10 text-dark-500 hover:text-red-400 transition-colors shrink-0"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -958,6 +989,11 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
           </div>
         </form>
       </div>
+
+      {/* Document Viewer Modal */}
+      {viewingDoc && (
+        <DocumentViewer doc={viewingDoc} onClose={() => setViewingDoc(null)} />
+      )}
     </div>
   );
 };

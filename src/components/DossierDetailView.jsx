@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+import DocumentViewer from './DocumentViewer';
 
 const DossierDetailView = ({ dossier, onClose, onEdit }) => {
+  const [viewingDoc, setViewingDoc] = useState(null);
   if (!dossier) return null;
 
   const isExport = dossier.Type_Operation === 'Export';
@@ -277,6 +279,47 @@ const DossierDetailView = ({ dossier, onClose, onEdit }) => {
         </div>
       </div>
       
+      {/* Documents Section (Screen only, not printed) */}
+      {dossier.Documents && dossier.Documents.length > 0 && (
+        <div className="print:hidden max-w-[850px] mx-auto mt-6 glass-card p-6">
+          <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+            </svg>
+            Documents Attachés ({dossier.Documents.length})
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {dossier.Documents.map((doc, i) => {
+              const ext = (doc.type || doc.url?.split('.').pop()?.split('?')[0] || '').toLowerCase();
+              const isPdf = ext === 'pdf';
+              return (
+                <button
+                  key={i}
+                  onClick={() => setViewingDoc(doc)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-dark-900/50 border border-dark-700/50 hover:border-primary-500/30 hover:bg-dark-700/30 transition-all duration-200 text-left group"
+                >
+                  <div className={`p-2 rounded-lg shrink-0 ${isPdf ? 'bg-red-500/10' : 'bg-primary-500/10'}`}>
+                    {isPdf ? (
+                      <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a2.25 2.25 0 002.25-2.25V5.25a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 003.75 21z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-dark-200 group-hover:text-primary-400 truncate transition-colors">{doc.name}</p>
+                    <p className="text-[10px] text-dark-500 uppercase">{ext}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
       {/* Print styles */}
       <style dangerouslySetInnerHTML={{__html: `
         @media print {
@@ -285,6 +328,11 @@ const DossierDetailView = ({ dossier, onClose, onEdit }) => {
           .printable-a4 { box-shadow: none !important; margin: 0; width: 100%; height: 100%; border: none; }
         }
       `}} />
+
+      {/* Document Viewer Modal */}
+      {viewingDoc && (
+        <DocumentViewer doc={viewingDoc} onClose={() => setViewingDoc(null)} />
+      )}
     </div>
   );
 };

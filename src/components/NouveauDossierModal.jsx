@@ -154,13 +154,20 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('upload_preset', uploadPreset);
 
       // Determine the correct Cloudinary resource type based on file extension
       const fileName = file.name;
       const ext = fileName.split('.').pop().toLowerCase();
       const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tiff'];
-      const resourceType = imageExts.includes(ext) ? 'image' : 'raw';
+      const isImageFile = imageExts.includes(ext);
+      const resourceType = isImageFile ? 'image' : 'raw';
+
+      // IMPORTANT: Force 'idyas_new' preset for raw files (PDFs, docs, etc.)
+      // because the old 'idyas_docs' preset doesn't support raw resource type uploads
+      const activePreset = isImageFile ? uploadPreset : 'idyas_new';
+      formData.append('upload_preset', activePreset);
+
+      console.log(`[Upload] File: ${fileName}, Type: ${resourceType}, Preset: ${activePreset}`);
 
       const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, {
         method: 'POST',
@@ -175,6 +182,7 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
       
       const data = await res.json();
       const fileUrl = data.secure_url;
+      console.log(`[Upload] Success! URL: ${fileUrl}`);
 
       setForm(prev => ({
         ...prev,

@@ -1,7 +1,10 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 
 const DocumentViewer = ({ doc, onClose }) => {
   const modalRef = useRef(null);
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   if (!doc || !doc.url) return null;
 
@@ -9,14 +12,43 @@ const DocumentViewer = ({ doc, onClose }) => {
   const isPdf = ext === 'pdf';
   const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext);
 
+  // Fetch PDF as blob to bypass Cloudinary's X-Frame-Options / CORS headers
+  useEffect(() => {
+    if (!isPdf || !doc.url) return;
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    fetch(doc.url)
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.blob();
+      })
+      .then(blob => {
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        setBlobUrl(url);
+        setLoading(false);
+      })
+      .catch(err => {
+        if (cancelled) return;
+        console.error('PDF fetch error:', err);
+        setError(err.message);
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [doc.url, isPdf]);
+
   const handleBackdropClick = (e) => {
     if (modalRef.current && !modalRef.current.contains(e.target)) {
       onClose();
     }
   };
-
-  // Using native browser PDF viewer (embed/iframe) which is more reliable than Google's crawler
-  const pdfViewerUrl = doc.url;
 
   return (
     <div
@@ -52,7 +84,7 @@ const DocumentViewer = ({ doc, onClose }) => {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Open in new tab */}
+            {/* Download / Open */}
             <a
               href={doc.url}
               target="_blank"
@@ -80,25 +112,37 @@ const DocumentViewer = ({ doc, onClose }) => {
         {/* Content Area */}
         <div className="flex-1 overflow-hidden bg-dark-900/50 relative">
           {isPdf ? (
-            <div className="w-full h-full bg-white flex flex-col">
-              <embed
-                src={pdfViewerUrl}
-                type="application/pdf"
-                className="w-full h-full border-0"
-                style={{ minHeight: '100%' }}
-              />
-              {/* Fallback link overlay for mobile/unsupported if needed */}
-              <div className="absolute bottom-4 right-4 print:hidden md:hidden">
-                <a 
-                  href={pdfViewerUrl} 
-                  target="_blank" 
+            loading ? (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-dark-400">
+                <div className="w-10 h-10 border-3 border-dark-600 border-t-primary-500 rounded-full animate-spin" />
+                <p className="text-sm">Chargement du PDF...</p>
+              </div>
+            ) : error ? (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-dark-400 p-6">
+                <svg className="w-16 h-16 text-red-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+                <p className="text-sm text-center">Impossible de charger le PDF (erreur {error})</p>
+                <p className="text-xs text-dark-500 text-center max-w-md">
+                  Le fichier n'est peut-être pas accessible. Essayez de le télécharger ou de le ré-uploader.
+                </p>
+                <a
+                  href={doc.url}
+                  target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 bg-primary-600 text-white rounded-full text-xs shadow-xl"
+                  download
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 transition-all"
                 >
-                  Ouvrir PDF
+                  Télécharger le fichier
                 </a>
               </div>
-            </div>
+            ) : blobUrl ? (
+              <iframe
+                src={blobUrl}
+                className="w-full h-full border-0 bg-white"
+                title={doc.name}
+              />
+            ) : null
           ) : isImage ? (
             <div className="w-full h-full flex items-center justify-center p-6 overflow-auto">
               <img
@@ -108,7 +152,6 @@ const DocumentViewer = ({ doc, onClose }) => {
               />
             </div>
           ) : (
-            /* Fallback for other file types */
             <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-dark-400">
               <svg className="w-16 h-16 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -118,7 +161,7 @@ const DocumentViewer = ({ doc, onClose }) => {
                 href={doc.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 transition-all font-sans"
+                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 transition-all"
               >
                 Télécharger le fichier
               </a>

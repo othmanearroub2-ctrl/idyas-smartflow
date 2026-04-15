@@ -156,24 +156,25 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
       formData.append('file', file);
       formData.append('upload_preset', uploadPreset);
 
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+      // Determine the correct Cloudinary resource type based on file extension
+      const fileName = file.name;
+      const ext = fileName.split('.').pop().toLowerCase();
+      const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tiff'];
+      const resourceType = imageExts.includes(ext) ? 'image' : 'raw';
+
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, {
         method: 'POST',
         body: formData,
       });
 
-      if (!res.ok) throw new Error('Erreur upload Cloudinary');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Cloudinary error:', errorData);
+        throw new Error(errorData.error?.message || 'Erreur upload Cloudinary');
+      }
       
       const data = await res.json();
-      let fileUrl = data.secure_url;
-      const fileName = file.name;
-
-      // Fix Cloudinary URL for non-image files (PDF, DOCX, etc.)
-      // Cloudinary returns /image/upload/ but PDFs need /raw/upload/ to be viewable
-      const ext = fileName.split('.').pop().toLowerCase();
-      const isRawFile = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip'].includes(ext);
-      if (isRawFile && fileUrl.includes('/image/upload/')) {
-        fileUrl = fileUrl.replace('/image/upload/', '/raw/upload/');
-      }
+      const fileUrl = data.secure_url;
 
       setForm(prev => ({
         ...prev,

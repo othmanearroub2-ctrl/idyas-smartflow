@@ -142,47 +142,59 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
     const file = e.target.files[0];
     if (!file) return;
 
-    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'idyas_new';
+    const fileName = file.name;
+    const ext = fileName.split('.').pop().toLowerCase();
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tiff'];
+    const isImageFile = imageExts.includes(ext);
 
-    if (!cloudName || !uploadPreset) {
-      alert("⚠️ Configuration manquante : Veuillez configurer VITE_CLOUDINARY_CLOUD_NAME et VITE_CLOUDINARY_UPLOAD_PRESET dans le fichier .env (à la racine du projet frontend)");
+    // Limit file size to 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      alert("⚠️ Le fichier est trop volumineux (max 10 MB).");
       return;
     }
 
     setUploadingDoc(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      let fileUrl;
 
-      // Determine the correct Cloudinary resource type based on file extension
-      const fileName = file.name;
-      const ext = fileName.split('.').pop().toLowerCase();
-      const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tiff'];
-      const isImageFile = imageExts.includes(ext);
-      const resourceType = isImageFile ? 'image' : 'raw';
+      if (isImageFile) {
+        // Images: upload to Cloudinary (works fine)
+        const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+        const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'idyas_new';
 
-      // IMPORTANT: Force 'idyas_new' preset for raw files (PDFs, docs, etc.)
-      // because the old 'idyas_docs' preset doesn't support raw resource type uploads
-      const activePreset = isImageFile ? uploadPreset : 'idyas_new';
-      formData.append('upload_preset', activePreset);
+        if (!cloudName) {
+          alert("⚠️ Configuration manquante : VITE_CLOUDINARY_CLOUD_NAME");
+          return;
+        }
 
-      console.log(`[Upload] File: ${fileName}, Type: ${resourceType}, Preset: ${activePreset}`);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', uploadPreset);
 
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, {
-        method: 'POST',
-        body: formData,
-      });
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: 'POST',
+          body: formData,
+        });
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error('Cloudinary error:', errorData);
-        throw new Error(errorData.error?.message || 'Erreur upload Cloudinary');
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          console.error('Cloudinary error:', errorData);
+          throw new Error(errorData.error?.message || 'Erreur upload Cloudinary');
+        }
+
+        const data = await res.json();
+        fileUrl = data.secure_url;
+        console.log(`[Upload] Image uploaded to Cloudinary: ${fileUrl}`);
+      } else {
+        // PDFs & Documents: read as base64 data URL (bypasses Cloudinary 401 issue)
+        fileUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error("Erreur de lecture du fichier"));
+          reader.readAsDataURL(file);
+        });
+        console.log(`[Upload] PDF stored as base64 data URL (${(fileUrl.length / 1024).toFixed(0)} KB)`);
       }
-      
-      const data = await res.json();
-      const fileUrl = data.secure_url;
-      console.log(`[Upload] Success! URL: ${fileUrl}`);
 
       setForm(prev => ({
         ...prev,
@@ -193,7 +205,7 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
       console.error('Upload error:', err);
-      alert("Échec de l'upload du fichier. Vérifiez votre connexion ou la configuration Cloudinary.");
+      alert("Échec de l'upload du fichier. " + (err.message || ''));
     } finally {
       setUploadingDoc(false);
     }

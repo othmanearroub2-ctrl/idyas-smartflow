@@ -11,11 +11,20 @@ const DocumentViewer = ({ doc, onClose }) => {
   const ext = (doc.type || doc.url.split('.').pop().split('?')[0] || '').toLowerCase();
   const isPdf = ext === 'pdf';
   const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext);
+  const isDataUrl = doc.url.startsWith('data:');
 
-  // Fetch PDF as blob to bypass Cloudinary's X-Frame-Options / CORS headers
+  // For Cloudinary URLs, fetch as blob. For data URLs, use directly.
   useEffect(() => {
     if (!isPdf || !doc.url) return;
 
+    // If it's already a data URL (base64), use it directly
+    if (isDataUrl) {
+      setBlobUrl(doc.url);
+      setLoading(false);
+      return;
+    }
+
+    // For remote URLs, try to fetch as blob
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -40,7 +49,8 @@ const DocumentViewer = ({ doc, onClose }) => {
 
     return () => {
       cancelled = true;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      // Only revoke if it's an object URL (not a data URL)
+      if (blobUrl && blobUrl.startsWith('blob:')) URL.revokeObjectURL(blobUrl);
     };
   }, [doc.url, isPdf]);
 
@@ -84,19 +94,21 @@ const DocumentViewer = ({ doc, onClose }) => {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Download / Open */}
-            <a
-              href={doc.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-dark-300 bg-dark-700/50 border border-dark-600 hover:bg-dark-600 hover:text-white transition-all shadow-sm"
-              title="Ouvrir dans un nouvel onglet"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-              </svg>
-              Nouvel onglet
-            </a>
+            {/* Download - only show for non-data URLs */}
+            {!isDataUrl && (
+              <a
+                href={doc.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-dark-300 bg-dark-700/50 border border-dark-600 hover:bg-dark-600 hover:text-white transition-all shadow-sm"
+                title="Ouvrir dans un nouvel onglet"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                </svg>
+                Nouvel onglet
+              </a>
+            )}
             {/* Close */}
             <button
               onClick={onClose}
@@ -124,17 +136,8 @@ const DocumentViewer = ({ doc, onClose }) => {
                 </svg>
                 <p className="text-sm text-center">Impossible de charger le PDF (erreur {error})</p>
                 <p className="text-xs text-dark-500 text-center max-w-md">
-                  Le fichier n'est peut-être pas accessible. Essayez de le télécharger ou de le ré-uploader.
+                  Ce fichier a été uploadé avec une ancienne version. Veuillez le supprimer et le ré-uploader.
                 </p>
-                <a
-                  href={doc.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download
-                  className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 transition-all"
-                >
-                  Télécharger le fichier
-                </a>
               </div>
             ) : blobUrl ? (
               <iframe

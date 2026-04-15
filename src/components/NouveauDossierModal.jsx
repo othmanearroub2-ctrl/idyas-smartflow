@@ -142,12 +142,20 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
     const file = e.target.files[0];
     if (!file) return;
 
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    // VERY IMPORTANT: By default, the `idyas_new` preset we created should allow all resource types
+    // and store them appropriately. We must use `auto/upload` and just pass the file.
+    const uploadPreset = 'idyas_new';
+
+    if (!cloudName) {
+      alert("⚠️ Configuration manquante : VITE_CLOUDINARY_CLOUD_NAME");
+      return;
+    }
+
     const fileName = file.name;
     const ext = fileName.split('.').pop().toLowerCase();
-    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tiff'];
-    const isImageFile = imageExts.includes(ext);
-
-    // Limit file size to 10MB
+    
+    // Cloudinary free tier has a 10MB limit for images, 100MB for video/raw. Safe bet is 10MB limit.
     if (file.size > 10 * 1024 * 1024) {
       alert("⚠️ Le fichier est trop volumineux (max 10 MB).");
       return;
@@ -155,46 +163,28 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
 
     setUploadingDoc(true);
     try {
-      let fileUrl;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', uploadPreset);
 
-      if (isImageFile) {
-        // Images: upload to Cloudinary (works fine)
-        const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-        const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'idyas_new';
+      // We explicitly use /auto/upload and let Cloudinary's preset dictate the storage type.
+      // Since `idyas_new` is configured as Unsigned, it will accept this.
+      console.log(`[Upload] Sending file ${fileName} to Cloudinary 'auto' endpoint using preset ${uploadPreset}...`);
+      
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+        method: 'POST',
+        body: formData,
+      });
 
-        if (!cloudName) {
-          alert("⚠️ Configuration manquante : VITE_CLOUDINARY_CLOUD_NAME");
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', uploadPreset);
-
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          console.error('Cloudinary error:', errorData);
-          throw new Error(errorData.error?.message || 'Erreur upload Cloudinary');
-        }
-
-        const data = await res.json();
-        fileUrl = data.secure_url;
-        console.log(`[Upload] Image uploaded to Cloudinary: ${fileUrl}`);
-      } else {
-        // PDFs & Documents: read as base64 data URL (bypasses Cloudinary 401 issue)
-        fileUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = () => reject(new Error("Erreur de lecture du fichier"));
-          reader.readAsDataURL(file);
-        });
-        console.log(`[Upload] PDF stored as base64 data URL (${(fileUrl.length / 1024).toFixed(0)} KB)`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Cloudinary error:', errorData);
+        throw new Error(errorData.error?.message || 'Erreur upload Cloudinary');
       }
+
+      const data = await res.json();
+      const fileUrl = data.secure_url;
+      console.log(`[Upload] Success: ${fileUrl}`);
 
       setForm(prev => ({
         ...prev,

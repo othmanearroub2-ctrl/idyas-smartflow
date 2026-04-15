@@ -15,8 +15,8 @@ const DocumentViewer = ({ doc, onClose }) => {
     }
   };
 
-  // Use Google Docs Viewer to display PDFs (Cloudinary blocks direct iframe embedding)
-  const pdfViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true`;
+  // Using native browser PDF viewer (embed/iframe) which is more reliable than Google's crawler
+  const pdfViewerUrl = doc.url;
 
   return (
     <div
@@ -57,7 +57,7 @@ const DocumentViewer = ({ doc, onClose }) => {
               href={doc.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-dark-300 bg-dark-700/50 border border-dark-600 hover:bg-dark-600 hover:text-white transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-dark-300 bg-dark-700/50 border border-dark-600 hover:bg-dark-600 hover:text-white transition-all shadow-sm"
               title="Ouvrir dans un nouvel onglet"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -78,14 +78,27 @@ const DocumentViewer = ({ doc, onClose }) => {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-hidden bg-dark-900/50">
+        <div className="flex-1 overflow-hidden bg-dark-900/50 relative">
           {isPdf ? (
-            <iframe
-              src={pdfViewerUrl}
-              className="w-full h-full border-0 bg-white"
-              title={doc.name}
-              allow="fullscreen"
-            />
+            <div className="w-full h-full bg-white flex flex-col">
+              <embed
+                src={pdfViewerUrl}
+                type="application/pdf"
+                className="w-full h-full border-0"
+                style={{ minHeight: '100%' }}
+              />
+              {/* Fallback link overlay for mobile/unsupported if needed */}
+              <div className="absolute bottom-4 right-4 print:hidden md:hidden">
+                <a 
+                  href={pdfViewerUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-primary-600 text-white rounded-full text-xs shadow-xl"
+                >
+                  Ouvrir PDF
+                </a>
+              </div>
+            </div>
           ) : isImage ? (
             <div className="w-full h-full flex items-center justify-center p-6 overflow-auto">
               <img
@@ -105,7 +118,7 @@ const DocumentViewer = ({ doc, onClose }) => {
                 href={doc.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 transition-all"
+                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 transition-all font-sans"
               >
                 Télécharger le fichier
               </a>

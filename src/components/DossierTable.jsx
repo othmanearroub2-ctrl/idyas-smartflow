@@ -217,7 +217,8 @@ const DossierTable = ({ data, onEdit, onArchive, onViewDetail, isArchiveView, ar
               sortedData.map((dossier, idx) => (
                 <tr
                   key={dossier.ID_Dossier}
-                  className="hover:bg-dark-700/30 transition-colors duration-150"
+                  onClick={() => onViewDetail && onViewDetail(dossier)}
+                  className="hover:bg-dark-700/30 transition-colors duration-150 cursor-pointer"
                 >
                   <td className="table-cell">
                     <span className="font-mono text-sm font-semibold text-primary-400">
@@ -265,7 +266,7 @@ const DossierTable = ({ data, onEdit, onArchive, onViewDetail, isArchiveView, ar
                   <td className="table-cell">
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => onViewDetail && onViewDetail(dossier)}
+                        onClick={(e) => { e.stopPropagation(); onViewDetail && onViewDetail(dossier); }}
                         className="p-1.5 rounded-lg text-dark-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all duration-200"
                         title="Voir la feuille du dossier"
                       >
@@ -276,7 +277,7 @@ const DossierTable = ({ data, onEdit, onArchive, onViewDetail, isArchiveView, ar
                       </button>
                       {!isArchiveView && (
                         <button
-                          onClick={() => onEdit && onEdit(dossier)}
+                          onClick={(e) => { e.stopPropagation(); onEdit && onEdit(dossier); }}
                           className="p-1.5 rounded-lg text-dark-400 hover:text-amber-400 hover:bg-amber-500/10 transition-all duration-200"
                           title="Modifier ce dossier"
                         >
@@ -286,7 +287,7 @@ const DossierTable = ({ data, onEdit, onArchive, onViewDetail, isArchiveView, ar
                         </button>
                       )}
                       <button
-                        onClick={() => onArchive && onArchive(dossier)}
+                        onClick={(e) => { e.stopPropagation(); onArchive && onArchive(dossier); }}
                         className={`p-1.5 rounded-lg transition-all duration-200 ${
                           isArchiveView
                             ? 'text-dark-400 hover:text-emerald-400 hover:bg-emerald-500/10'

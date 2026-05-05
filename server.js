@@ -32,15 +32,15 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
 
 // User Model
 const User = sequelize.define('User', {
-  email: { type: DataTypes.STRING, allowOfNull: false, unique: true },
-  password: { type: DataTypes.STRING, allowOfNull: false },
+  email: { type: DataTypes.STRING, allowNull: false, unique: true },
+  password: { type: DataTypes.STRING, allowNull: false },
   resetPasswordToken: { type: DataTypes.STRING },
   resetPasswordExpire: { type: DataTypes.DATE },
 }, { timestamps: true });
 
 // Entity Model (JSONB for items flexibility)
 const Entity = sequelize.define('Entity', {
-  type: { type: DataTypes.STRING, allowOfNull: false, unique: true },
+  type: { type: DataTypes.STRING, allowNull: false, unique: true },
   items: { type: DataTypes.JSONB, defaultValue: [] }
 }, { timestamps: true });
 

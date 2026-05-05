@@ -104,11 +104,14 @@ const Dossier = sequelize.define('Dossier', {
   Finances: { type: DataTypes.JSONB, defaultValue: {} }
 }, { timestamps: true });
 
-// --- DB Init & Auth Helper ---
-sequelize.authenticate()
-  .then(async () => {
+// --- DB Init & Server Start ---
+const startServer = async () => {
+  try {
+    await sequelize.authenticate();
     console.log('✅ Connecté à PostgreSQL via Supabase');
-    await sequelize.sync({ alter: true }); // Sync models to DB tables
+    
+    await sequelize.sync({ alter: true });
+    console.log('✅ Tables synchronisées');
     
     // Seed admin user
     const adminEmail = 'othmanearroub2@gmail.com';
@@ -119,8 +122,18 @@ sequelize.authenticate()
       await User.create({ email: adminEmail, password: hashedPassword });
       console.log('🔑 Utilisateur admin initialisé en base de données.');
     }
-  })
-  .catch(err => console.error('❌ Erreur de connexion PostgreSQL :', err));
+    
+    // Start Express ONLY after DB is ready
+    app.listen(PORT, () => {
+      console.log(`🚀 Serveur backend démarré sur le port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('❌ Erreur de connexion PostgreSQL :', err);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 // --- Nodemailer Configuration ---
 const transporter = nodemailer.createTransport({
@@ -285,6 +298,7 @@ app.post('/api/login', async (req, res) => {
     
     res.json({ message: 'Connexion réussie', user: { email: user.email, name: 'Administrateur' } });
   } catch (error) {
+    console.error('❌ Erreur login:', error);
     res.status(500).json({ error: 'Erreur serveur lors de la connexion' });
   }
 });
@@ -337,10 +351,7 @@ app.post('/api/reset-password', async (req, res) => {
 
     res.json({ message: 'Mot de passe mis à jour avec succès' });
   } catch (error) {
+    console.error('❌ Erreur reset-password:', error);
     res.status(500).json({ error: 'Erreur serveur lors de la réinitialisation' });
   }
-});
-
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur backend démarré sur le port ${PORT}`);
 });

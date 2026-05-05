@@ -1,147 +1,143 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose');
+const { Sequelize, DataTypes } = require('sequelize');
 const nodemailer = require('nodemailer');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middlewares
 app.use(cors({
-  origin: '*', // En production, tu pourras restreindre au domaine Vercel
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
 }));
 app.use(express.json());
 
-// --- MongoDB Connexion ---
-mongoose.connect(process.env.MONGODB_URI)
-.then(async () => {
-  console.log('✅ Connecté à MongoDB Atlas');
-  // Seed admin user
-  const adminEmail = 'othmanearroub2@gmail.com';
-  const User = mongoose.model('User');
-  const existingAdmin = await User.findOne({ email: adminEmail });
-  if (!existingAdmin) {
-    const bcrypt = require('bcryptjs');
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('IDYAS2026', salt);
-    await User.create({ email: adminEmail, password: hashedPassword });
-    console.log('🔑 Utilisateur admin initialisé en base de données.');
+// --- PostgreSQL Connexion ---
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialect: 'postgres',
+  logging: false, // Set to console.log to see SQL queries
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false
+    }
   }
-})
-.catch(err => console.error('❌ Erreur de connexion MongoDB :', err));
+});
+
+// --- Models Definition ---
+
+// User Model
+const User = sequelize.define('User', {
+  email: { type: DataTypes.STRING, allowOfNull: false, unique: true },
+  password: { type: DataTypes.STRING, allowOfNull: false },
+  resetPasswordToken: { type: DataTypes.STRING },
+  resetPasswordExpire: { type: DataTypes.DATE },
+}, { timestamps: true });
+
+// Entity Model (JSONB for items flexibility)
+const Entity = sequelize.define('Entity', {
+  type: { type: DataTypes.STRING, allowOfNull: false, unique: true },
+  items: { type: DataTypes.JSONB, defaultValue: [] }
+}, { timestamps: true });
+
+// Dossier Model
+const Dossier = sequelize.define('Dossier', {
+  ID_Dossier: { type: DataTypes.STRING, primaryKey: true, unique: true },
+  Facture_No: { type: DataTypes.STRING, defaultValue: '' },
+  Type_Operation: { type: DataTypes.STRING, defaultValue: '' },
+  Fournisseur: { type: DataTypes.STRING, defaultValue: '' },
+  Client: { type: DataTypes.STRING, defaultValue: '' },
+  Agent: { type: DataTypes.STRING, defaultValue: '' },
+  Armateur: { type: DataTypes.STRING, defaultValue: '' },
+  Transporteur: { type: DataTypes.STRING, defaultValue: '' },
+  Transitaire: { type: DataTypes.STRING, defaultValue: '' },
+  Numero_TC: { type: DataTypes.STRING, defaultValue: '' },
+  Numero_Remorque: { type: DataTypes.STRING, defaultValue: '' },
+  Lieu_Chargement: { type: DataTypes.STRING, defaultValue: '' },
+  Lieu_Dechargement: { type: DataTypes.STRING, defaultValue: '' },
+  Mode_Transport: { type: DataTypes.STRING, defaultValue: '' },
+  Type_Envoi: { type: DataTypes.STRING, defaultValue: '' },
+  Incoterm: { type: DataTypes.STRING, defaultValue: '' },
+  Marchandise: { type: DataTypes.STRING, defaultValue: '' },
+  Designation: { type: DataTypes.STRING, defaultValue: '' },
+  Nb_Colis: { type: DataTypes.STRING, defaultValue: '' },
+  Nombre_Palettes: { type: DataTypes.STRING, defaultValue: '' },
+  Poids_Brut: { type: DataTypes.STRING, defaultValue: '' },
+  Volume: { type: DataTypes.STRING, defaultValue: '' },
+  N_Plomb: { type: DataTypes.STRING, defaultValue: '' },
+  Navire_Voyage: { type: DataTypes.STRING, defaultValue: '' },
+  BL_LTA_CMR_No: { type: DataTypes.STRING, defaultValue: '' },
+  Franchise: { type: DataTypes.STRING, defaultValue: '' },
+  Port_Chargement: { type: DataTypes.STRING, defaultValue: '' },
+  Date_Enlevement: { type: DataTypes.STRING, defaultValue: '' },
+  ETD: { type: DataTypes.STRING, defaultValue: '' },
+  ATD: { type: DataTypes.STRING, defaultValue: '' },
+  ETA: { type: DataTypes.STRING, defaultValue: '' },
+  ATA: { type: DataTypes.STRING, defaultValue: '' },
+  Reception_BAD: { type: DataTypes.STRING, defaultValue: '' },
+  Remis_Transit: { type: DataTypes.STRING, defaultValue: '' },
+  Reception_Docs: { type: DataTypes.STRING, defaultValue: '' },
+  Livre_Le: { type: DataTypes.STRING, defaultValue: '' },
+  Observations: { type: DataTypes.TEXT, defaultValue: '' },
+  Historique: { type: DataTypes.TEXT, defaultValue: '' },
+  Destinataire: { type: DataTypes.STRING, defaultValue: '' },
+  Booking_No: { type: DataTypes.STRING, defaultValue: '' },
+  Sequence: { type: DataTypes.STRING, defaultValue: '' },
+  Regle_Le: { type: DataTypes.STRING, defaultValue: '' },
+  Export_Montant: { type: DataTypes.STRING, defaultValue: '' },
+  DHP: { type: DataTypes.STRING, defaultValue: '' },
+  DHR: { type: DataTypes.STRING, defaultValue: '' },
+  Tare: { type: DataTypes.STRING, defaultValue: '' },
+  TC_Type: { type: DataTypes.STRING, defaultValue: '' },
+  Phase: { type: DataTypes.STRING, defaultValue: 'Dossier Créé' },
+  Retard_Calcule: { type: DataTypes.INTEGER, defaultValue: 0 },
+  Fiabilite_Transporteur: { type: DataTypes.INTEGER, defaultValue: 100 },
+  Status: { type: DataTypes.STRING, defaultValue: 'En attente' },
+  isArchived: { type: DataTypes.BOOLEAN, defaultValue: false },
+  // JSONB Fields (Replacing MongoDB nested objects/arrays)
+  Documents: { type: DataTypes.JSONB, defaultValue: [] },
+  DocVerif: { type: DataTypes.JSONB, defaultValue: {} },
+  Finances: { type: DataTypes.JSONB, defaultValue: {} }
+}, { timestamps: true });
+
+// --- DB Init & Auth Helper ---
+sequelize.authenticate()
+  .then(async () => {
+    console.log('✅ Connecté à PostgreSQL via Supabase');
+    await sequelize.sync({ alter: true }); // Sync models to DB tables
+    
+    // Seed admin user
+    const adminEmail = 'othmanearroub2@gmail.com';
+    const existingAdmin = await User.findOne({ where: { email: adminEmail } });
+    if (!existingAdmin) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash('IDYAS2026', salt);
+      await User.create({ email: adminEmail, password: hashedPassword });
+      console.log('🔑 Utilisateur admin initialisé en base de données.');
+    }
+  })
+  .catch(err => console.error('❌ Erreur de connexion PostgreSQL :', err));
 
 // --- Nodemailer Configuration ---
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Mot de passe d'application (16 caractères)
+    pass: process.env.EMAIL_PASS,
   },
 });
 
-// Test transporter (debug)
-transporter.verify((error, success) => {
+transporter.verify((error) => {
   if (error) {
     console.warn('⚠️ Erreur configuration email :', error.message);
   } else {
     console.log('📧 Serveur prêt pour l\'envoi d\'emails');
   }
 });
-
-const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
-
-// --- Mongoose Schema & Model ---
-const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true }, // Hashed
-  resetPasswordToken: String,
-  resetPasswordExpire: Date,
-});
-
-const User = mongoose.model('User', userSchema);
-
-const entitySchema = new mongoose.Schema({
-  type: { type: String, required: true, unique: true }, // 'fournisseurs', 'transporteurs', 'clients'
-  items: { type: [String], default: [] }
-});
-
-const Entity = mongoose.model('Entity', entitySchema);
-
-const dossierSchema = new mongoose.Schema({
-  ID_Dossier: { type: String, required: true, unique: true },
-  Facture_No: { type: String, default: '' },
-  Type_Operation: { type: String, default: '' },
-  Fournisseur: { type: String, default: '' },
-  Client: { type: String, default: '' },
-  Agent: { type: String, default: '' },
-  Armateur: { type: String, default: '' },
-  Transporteur: { type: String, default: '' },
-  Transitaire: { type: String, default: '' },
-  Numero_TC: { type: String, default: '' },
-  Numero_Remorque: { type: String, default: '' },
-  Lieu_Chargement: { type: String, default: '' },
-  Lieu_Dechargement: { type: String, default: '' },
-  Mode_Transport: { type: String, default: '' },
-  Type_Envoi: { type: String, default: '' },
-  Incoterm: { type: String, default: '' },
-  Marchandise: { type: String, default: '' },
-  Designation: { type: String, default: '' },
-  Nb_Colis: { type: String, default: '' },
-  Nombre_Palettes: { type: String, default: '' },
-  Poids_Brut: { type: String, default: '' },
-  Volume: { type: String, default: '' },
-  N_Plomb: { type: String, default: '' },
-  Navire_Voyage: { type: String, default: '' },
-  BL_LTA_CMR_No: { type: String, default: '' },
-  Franchise: { type: String, default: '' },
-  Port_Chargement: { type: String, default: '' },
-  Date_Enlevement: { type: String, default: '' },
-  ETD: { type: String, default: '' },
-  ATD: { type: String, default: '' },
-  ETA: { type: String, default: '' },
-  ATA: { type: String, default: '' },
-  Reception_BAD: { type: String, default: '' },
-  Remis_Transit: { type: String, default: '' },
-  Reception_Docs: { type: String, default: '' },
-  Livre_Le: { type: String, default: '' },
-  Observations: { type: String, default: '' },
-  Historique: { type: String, default: '' },
-  Destinataire: { type: String, default: '' },
-  Booking_No: { type: String, default: '' },
-  Sequence: { type: String, default: '' },
-  Regle_Le: { type: String, default: '' },
-  Export_Montant: { type: String, default: '' },
-  DHP: { type: String, default: '' },
-  DHR: { type: String, default: '' },
-  Tare: { type: String, default: '' },
-  TC_Type: { type: String, default: '' },
-  Phase: { type: String, default: 'Dossier Créé' },
-  Retard_Calcule: { type: Number, default: 0 },
-  Fiabilite_Transporteur: { type: Number, default: 100 },
-  Status: { type: String, default: 'En attente' },
-  Documents: { type: [{ name: String, url: String, addedAt: String }], default: [] },
-  DocVerif: {
-    PL_Poids: { type: String, default: '' },
-    PL_Palettes: { type: String, default: '' },
-    PL_Marchandise: { type: String, default: '' },
-    CMR_Poids: { type: String, default: '' },
-    CMR_Palettes: { type: String, default: '' },
-    CMR_Marchandise: { type: String, default: '' },
-    BL_Poids: { type: String, default: '' },
-    BL_Palettes: { type: String, default: '' },
-    BL_Marchandise: { type: String, default: '' }
-  },
-  isArchived: { type: Boolean, default: false },
-  Finances: {
-    Achats: [{ desc: String, amount: Number }],
-    Ventes: [{ desc: String, amount: Number }]
-  }
-}, { timestamps: true });
-
-const Dossier = mongoose.model('Dossier', dossierSchema);
 
 // --- Helper functions ---
 const calculateDelayDays = (etaStr, ataStr) => {
@@ -163,11 +159,12 @@ const determineStatus = (etd, atd, eta, ata, delayDays) => {
   }
   return 'En attente';
 };
+
 // --- Routes ---
+
 app.get('/api/entities', async (req, res) => {
   try {
-    const Entity = mongoose.model('Entity');
-    const entities = await Entity.find();
+    const entities = await Entity.findAll();
     res.json(entities);
   } catch (error) {
     res.status(500).json({ error: 'Erreur lors de la récupération des entités' });
@@ -176,13 +173,12 @@ app.get('/api/entities', async (req, res) => {
 
 app.post('/api/entities/:type', async (req, res) => {
   try {
-    const Entity = mongoose.model('Entity');
     const type = req.params.type;
     const { items } = req.body;
-    let entity = await Entity.findOne({ type });
-    if (!entity) {
-      entity = new Entity({ type, items: [] });
-    }
+    let [entity] = await Entity.findOrCreate({ 
+      where: { type },
+      defaults: { items: [] }
+    });
     entity.items = items;
     await entity.save();
     res.json(entity);
@@ -190,9 +186,10 @@ app.post('/api/entities/:type', async (req, res) => {
     res.status(500).json({ error: 'Erreur lors de la sauvegarde de l\'entité' });
   }
 });
+
 app.get('/api/dossiers', async (req, res) => {
   try {
-    const dossiers = await Dossier.find().sort({ createdAt: -1 });
+    const dossiers = await Dossier.findAll({ order: [['createdAt', 'DESC']] });
     res.json(dossiers);
   } catch (error) {
     console.error('Erreur GET /api/dossiers:', error);
@@ -218,20 +215,14 @@ app.post('/api/dossiers', async (req, res) => {
       delayDays
     );
 
-    const dossier = new Dossier(newDossierData);
-    await dossier.save();
-    
-    res.status(201).json({ 
-      message: 'Dossier créé avec succès (MongoDB)', 
-      dossier 
-    });
+    const dossier = await Dossier.create(newDossierData);
+    res.status(201).json({ message: 'Dossier créé avec succès (Postgres)', dossier });
   } catch (error) {
     console.error('Erreur POST /api/dossiers:', error);
     res.status(500).json({ error: 'Échec de la sauvegarde du dossier' });
   }
 });
 
-// PUT — Modifier un dossier existant
 app.put('/api/dossiers/:id', async (req, res) => {
   try {
     const updateData = req.body;
@@ -250,27 +241,25 @@ app.put('/api/dossiers/:id', async (req, res) => {
       delayDays
     );
 
-    const dossier = await Dossier.findOneAndUpdate(
-      { ID_Dossier: req.params.id },
-      updateData,
-      { new: true }
-    );
-    
-    if (!dossier) {
+    const [updatedRowsCount, updatedRows] = await Dossier.update(updateData, {
+      where: { ID_Dossier: req.params.id },
+      returning: true // specific to Postgres
+    });
+
+    if (updatedRowsCount === 0) {
       return res.status(404).json({ error: 'Dossier non trouvé' });
     }
     
-    res.json({ message: 'Dossier modifié avec succès', dossier });
+    res.json({ message: 'Dossier modifié avec succès', dossier: updatedRows[0] });
   } catch (error) {
     console.error('Erreur PUT /api/dossiers:', error);
     res.status(500).json({ error: 'Échec de la modification du dossier' });
   }
 });
 
-// PATCH — Toggle archive status
 app.patch('/api/dossiers/:id/archive', async (req, res) => {
   try {
-    const dossier = await Dossier.findOne({ ID_Dossier: req.params.id });
+    const dossier = await Dossier.findByPk(req.params.id);
     if (!dossier) {
       return res.status(404).json({ error: 'Dossier non trouvé' });
     }
@@ -288,9 +277,7 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email et mot de passe requis' });
 
-    const User = mongoose.model('User');
-    const user = await User.findOne({ email: email.toLowerCase() });
-    
+    const user = await User.findOne({ where: { email: email.toLowerCase() } });
     if (!user) return res.status(401).json({ error: 'Utilisateur non trouvé' });
     
     const isMatch = await bcrypt.compare(password, user.password);
@@ -307,22 +294,17 @@ app.post('/api/generate-reset-token', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email requis' });
 
-    const User = mongoose.model('User');
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ where: { email: email.toLowerCase() } });
     if (!user) return res.status(404).json({ error: 'Cet email n\'existe pas.' });
 
-    // Generate random token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    
-    // Hash token for saving in DB (security best practice)
     const resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    const resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes expiration
+    const resetPasswordExpire = new Date(Date.now() + 15 * 60 * 1000);
 
     user.resetPasswordToken = resetPasswordToken;
     user.resetPasswordExpire = resetPasswordExpire;
     await user.save();
 
-    // Return the raw token (to be sent in the email by Vercel)
     res.json({ token: resetToken });
   } catch (error) {
     res.status(500).json({ error: 'Erreur lors de la génération du token' });
@@ -336,10 +318,11 @@ app.post('/api/reset-password', async (req, res) => {
 
     const resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
 
-    const User = mongoose.model('User');
     const user = await User.findOne({
-      resetPasswordToken,
-      resetPasswordExpire: { $gt: Date.now() } // Token must not be expired
+      where: {
+        resetPasswordToken,
+        resetPasswordExpire: { [Sequelize.Op.gt]: new Date() }
+      }
     });
 
     if (!user) {
@@ -348,11 +331,8 @@ app.post('/api/reset-password', async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
-    
-    // Clear reset tokens
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    
+    user.resetPasswordToken = null;
+    user.resetPasswordExpire = null;
     await user.save();
 
     res.json({ message: 'Mot de passe mis à jour avec succès' });

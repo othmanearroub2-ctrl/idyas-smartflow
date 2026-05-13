@@ -178,6 +178,7 @@ const DossierDetailView = ({ dossier, onClose, onEdit }) => {
                 <Field label="N° DE PLOMB" value={dossier.N_Plomb} />
                 <Field label="INCOTERM" value={dossier.Incoterm} />
                 <Field label="NAVIRE / VOYAGE" value={dossier.Navire_Voyage} />
+                <Field label="MODE DE TRANSPORT" value={dossier.Mode_Transport} />
                 <Field label="BL/LTA/CMR N°" value={dossier.BL_LTA_CMR_No} />
                 <Field label="FRANCHISE" value={dossier.Franchise} />
                 <Field label="PORT DE CHARGEMENT" value={dossier.Lieu_Chargement || dossier.Port_Chargement} />
@@ -219,6 +220,7 @@ const DossierDetailView = ({ dossier, onClose, onEdit }) => {
                 <Field label="N°TC" value={dossier.Numero_TC} width="140px" />
                 <Field label="ARRIVEE LE" value={dossier.ATA || dossier.ETA} width="140px" />
                 <Field label="N° DE PLOMB" value={dossier.N_Plomb} width="140px" />
+                <Field label="MODE TRANSPORT" value={dossier.Mode_Transport} width="140px" />
                 <Field label="SEQUENCE" value={dossier.Sequence} width="140px" />
                 <Field label="Transporteur" value={dossier.Transporteur} width="140px" />
                 <Field label="Réglé le" value={dossier.Regle_Le} width="140px" />

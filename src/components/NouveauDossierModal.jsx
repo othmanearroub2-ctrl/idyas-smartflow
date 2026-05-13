@@ -460,6 +460,20 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
                   className="form-input"
                 />
               </FormField>
+              <FormField label="Mode de Transport">
+                <select
+                  value={form.Mode_Transport}
+                  onChange={(e) => handleChange('Mode_Transport', e.target.value)}
+                  className="form-input form-select"
+                >
+                  <option value="">Sélectionner...</option>
+                  <option value="Aerien">✈️ Aerien</option>
+                  <option value="Routier FTL">🚛 Routier FTL</option>
+                  <option value="Routier LTL">🚚 Routier LTL</option>
+                  <option value="Maritime LCL">📦 Maritime LCL</option>
+                  <option value="Maritime FCL">🚢 Maritime FCL</option>
+                </select>
+              </FormField>
               <FormField label="N° de Plomb">
                 <input
                   type="text"

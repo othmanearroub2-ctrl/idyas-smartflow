@@ -555,16 +555,13 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
                 />
               </FormField>
               <FormField label="Transporteur" error={errors.Transporteur}>
-                <select
+                <input
+                  type="text"
                   value={form.Transporteur}
                   onChange={(e) => handleChange('Transporteur', e.target.value)}
-                  className="form-input form-select"
-                >
-                  <option value="">Sélectionner...</option>
-                  {transporteurs.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+                  placeholder="Nom du transporteur"
+                  className="form-input"
+                />
               </FormField>
             </div>
           </div>

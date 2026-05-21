@@ -143,9 +143,7 @@ function App() {
       const response = await fetch(API_URL);
       if (!response.ok) throw new Error('API error');
       const data = await response.json();
-      if (data.length > 0) {
-        setAllDossiers(data);
-      }
+      setAllDossiers(data);
     } catch (error) {
       console.warn('⚠️ API inaccessible, utilisation des données locales:', error.message);
     } finally {

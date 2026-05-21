@@ -240,11 +240,16 @@ function App() {
 
     try {
       const baseUrl = API_URL.replace('/api/dossiers', '');
-      const url = `${baseUrl}/api/dossiers/${dossier.ID_Dossier}`;
+      const url = `${baseUrl}/api/dossiers/${encodeURIComponent(dossier.ID_Dossier)}`;
       const response = await fetch(url, {
         method: 'DELETE',
       });
-      if (!response.ok) throw new Error('Delete failed');
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Erreur serveur (${response.status})`);
+      }
+      
       await fetchDossiers();
     } catch (error) {
       console.error('⚠️ Erreur suppression:', error);

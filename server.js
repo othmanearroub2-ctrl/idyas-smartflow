@@ -34,6 +34,7 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
 const User = sequelize.define('User', {
   email: { type: DataTypes.STRING, allowNull: false, unique: true },
   password: { type: DataTypes.STRING, allowNull: false },
+  name: { type: DataTypes.STRING, defaultValue: 'Utilisateur' },
   resetPasswordToken: { type: DataTypes.STRING },
   resetPasswordExpire: { type: DataTypes.DATE },
 }, { timestamps: true });
@@ -113,14 +114,31 @@ const startServer = async () => {
     await sequelize.sync({ alter: true });
     console.log('✅ Tables synchronisées');
     
-    // Seed admin user
-    const adminEmail = 'othmanearroub2@gmail.com';
-    const existingAdmin = await User.findOne({ where: { email: adminEmail } });
-    if (!existingAdmin) {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('IDYAS2026', salt);
-      await User.create({ email: adminEmail, password: hashedPassword });
-      console.log('🔑 Utilisateur admin initialisé en base de données.');
+    // Seed users
+    const usersToSeed = [
+      { email: 'othmanearroub2@gmail.com', name: 'Administrateur' },
+      { email: 'Exploitation@idyasshipping.ma', name: 'Exploitation' },
+      { email: 'Tbouchra@idyasshipping.ma', name: 'Bouchra' },
+      { email: 'Idrisstachfine@idyasshipping.ma', name: 'Idriss Tachfine' }
+    ];
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('IDYAS2026', salt);
+
+    for (const u of usersToSeed) {
+      const existingUser = await User.findOne({ where: { email: u.email.toLowerCase() } });
+      if (!existingUser) {
+        await User.create({ 
+          email: u.email.toLowerCase(), 
+          password: hashedPassword,
+          name: u.name 
+        });
+        console.log(`🔑 Utilisateur ${u.name} initialisé.`);
+      } else if (existingUser.name === 'Utilisateur') {
+        existingUser.name = u.name;
+        await existingUser.save();
+        console.log(`🔑 Nom mis à jour pour ${u.email}`);
+      }
     }
     
     // Start Express ONLY after DB is ready
@@ -296,7 +314,7 @@ app.post('/api/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ error: 'Mot de passe incorrect' });
     
-    res.json({ message: 'Connexion réussie', user: { email: user.email, name: 'Administrateur' } });
+    res.json({ message: 'Connexion réussie', user: { email: user.email, name: user.name } });
   } catch (error) {
     console.error('❌ Erreur login:', error);
     res.status(500).json({ error: 'Erreur serveur lors de la connexion' });

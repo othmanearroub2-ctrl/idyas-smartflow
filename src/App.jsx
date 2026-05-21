@@ -231,6 +231,27 @@ function App() {
     }
   }, [fetchDossiers]);
 
+  // Hard delete dossier
+  const handleDeleteDossier = useCallback(async (dossier) => {
+    const confirmed = window.confirm(
+      `⚠️ ATTENTION : Voulez-vous supprimer DÉFINITIVEMENT le dossier ${dossier.ID_Dossier} ?\nCette action est irréversible.`
+    );
+    if (!confirmed) return;
+
+    try {
+      const baseUrl = API_URL.replace('/api/dossiers', '');
+      const url = `${baseUrl}/api/dossiers/${dossier.ID_Dossier}`;
+      const response = await fetch(url, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Delete failed');
+      await fetchDossiers();
+    } catch (error) {
+      console.error('⚠️ Erreur suppression:', error);
+      alert("Erreur lors de la suppression du dossier : " + error.message);
+    }
+  }, [fetchDossiers]);
+
   // Count archived dossiers
   const archiveCount = useMemo(() => allDossiers.filter(d => d.isArchived).length, [allDossiers]);
 
@@ -466,6 +487,7 @@ function App() {
             data={filteredData} 
             onEdit={handleEditDossier} 
             onArchive={handleArchiveDossier}
+            onDelete={handleDeleteDossier}
             onViewDetail={setSelectedDossier}
             isArchiveView={showArchives}
             archiveCount={archiveCount}

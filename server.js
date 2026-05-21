@@ -302,6 +302,20 @@ app.patch('/api/dossiers/:id/archive', async (req, res) => {
   }
 });
 
+app.delete('/api/dossiers/:id', async (req, res) => {
+  try {
+    const dossier = await Dossier.findByPk(req.params.id);
+    if (!dossier) {
+      return res.status(404).json({ error: 'Dossier non trouvé' });
+    }
+    await dossier.destroy();
+    res.json({ message: 'Dossier supprimé définitivement avec succès' });
+  } catch (error) {
+    console.error('Erreur DELETE /api/dossiers:', error);
+    res.status(500).json({ error: 'Échec de la suppression du dossier' });
+  }
+});
+
 // --- Auth Routes ---
 app.post('/api/login', async (req, res) => {
   try {

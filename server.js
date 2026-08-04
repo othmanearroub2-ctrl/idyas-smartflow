@@ -10,8 +10,12 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middlewares
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+  : ['https://idyas-smartflow.vercel.app', 'http://localhost:5173'];
+
 app.use(cors({
-  origin: '*',
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
 }));
 app.use(express.json());
@@ -123,7 +127,7 @@ const startServer = async () => {
     ];
 
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('IDYAS2026', salt);
+    const hashedPassword = await bcrypt.hash(process.env.SEED_DEFAULT_PASSWORD || 'IDYAS2026', salt);
 
     for (const u of usersToSeed) {
       const existingUser = await User.findOne({ where: { email: u.email.toLowerCase() } });

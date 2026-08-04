@@ -168,11 +168,11 @@ function App() {
         });
         if (!response.ok) throw new Error('PUT failed');
       } else {
-        // POST — create new
+        // POST — create new. Stamp the signed-in user for traceability.
         const response = await fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dossierData),
+          body: JSON.stringify({ ...dossierData, Cree_Par: user?.name || '' }),
         });
         if (!response.ok) throw new Error('POST failed');
       }
@@ -181,10 +181,10 @@ function App() {
       console.warn('⚠️ Sauvegarde échouée:', error.message);
       alert(`⚠️ Erreur de connexion avec le serveur (Render) :\n${error.message}\n\nLe dossier a été sauvegardé en "mode hors-ligne" et disparaîtra au rafraîchissement. Vérifiez que votre backend sur Render est bien allumé et que ${API_URL} est la bonne adresse.`);
       if (!isEdit) {
-        setAllDossiers(prev => [dossierData, ...prev]);
+        setAllDossiers(prev => [{ ...dossierData, Cree_Par: user?.name || '' }, ...prev]);
       }
     }
-  }, [fetchDossiers]);
+  }, [fetchDossiers, user]);
 
   // Open edit modal
   const handleEditDossier = useCallback((dossier) => {

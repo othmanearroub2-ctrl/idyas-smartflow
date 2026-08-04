@@ -103,6 +103,9 @@ const Dossier = sequelize.define('Dossier', {
   Fiabilite_Transporteur: { type: DataTypes.INTEGER, defaultValue: 100 },
   Status: { type: DataTypes.STRING, defaultValue: 'En attente' },
   isArchived: { type: DataTypes.BOOLEAN, defaultValue: false },
+  // Traçabilité : nom de l'utilisateur ayant créé le dossier. Figé à la
+  // création, jamais modifié par une édition ultérieure (voir la route PUT).
+  Cree_Par: { type: DataTypes.STRING, defaultValue: '' },
   // JSONB Fields (Replacing MongoDB nested objects/arrays)
   Documents: { type: DataTypes.JSONB, defaultValue: [] },
   DocVerif: { type: DataTypes.JSONB, defaultValue: {} },
@@ -301,7 +304,11 @@ app.post('/api/dossiers', async (req, res) => {
 app.put('/api/dossiers/:id', async (req, res) => {
   try {
     const updateData = req.body;
-    
+
+    // Le créateur est figé à la création : une édition ne doit jamais le
+    // réécrire, quel que soit ce que le client renvoie.
+    delete updateData.Cree_Par;
+
     let delayDays = 0;
     if (updateData.ETA && updateData.ATA) {
       delayDays = calculateDelayDays(updateData.ETA, updateData.ATA);

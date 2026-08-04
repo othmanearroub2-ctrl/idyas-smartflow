@@ -12,6 +12,15 @@ const DossierDetailView = ({ dossier, onClose, onEdit }) => {
     window.print();
   };
 
+  // Creation timestamp for the signature block. Older dossiers predate the
+  // field, so render nothing rather than an "Invalid Date".
+  const formatCreatedAt = (value) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return `${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+  };
+
   const Field = ({ label, value, width = "180px" }) => (
     <div className="flex text-[13px] leading-relaxed mb-4">
       <span className="font-bold shrink-0 uppercase" style={{ width }}>{label} :</span>
@@ -275,6 +284,16 @@ const DossierDetailView = ({ dossier, onClose, onEdit }) => {
                   <div key={i} className="border-b border-dotted border-gray-400 w-full h-[1.5rem]"></div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Shared: signature discrète — traçabilité du créateur du dossier */}
+          {dossier.Cree_Par && (
+            <div className="mt-auto pt-6 flex justify-end">
+              <span className="font-mono text-[9px] text-gray-500 tracking-wide">
+                {dossier.Cree_Par}
+                {formatCreatedAt(dossier.createdAt) && ` · ${formatCreatedAt(dossier.createdAt)}`}
+              </span>
             </div>
           )}
 

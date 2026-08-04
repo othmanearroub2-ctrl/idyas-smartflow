@@ -12,14 +12,19 @@ const DossierDetailView = ({ dossier, onClose, onEdit }) => {
     window.print();
   };
 
-  // Creation timestamp for the signature block. Older dossiers predate the
-  // field, so render nothing rather than an "Invalid Date".
   const formatCreatedAt = (value) => {
     if (!value) return '';
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return '';
     return `${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
   };
+
+  // Footer signature. Dossiers created before Cree_Par existed have no author
+  // on record, so they show the creation date alone rather than a fabricated
+  // name. Nothing renders if neither is known.
+  const signature = [dossier.Cree_Par, formatCreatedAt(dossier.createdAt)]
+    .filter(Boolean)
+    .join(' · ');
 
   const Field = ({ label, value, width = "180px" }) => (
     <div className="flex text-[13px] leading-relaxed mb-4">
@@ -288,11 +293,10 @@ const DossierDetailView = ({ dossier, onClose, onEdit }) => {
           )}
 
           {/* Shared: signature discrète — traçabilité du créateur du dossier */}
-          {dossier.Cree_Par && (
+          {signature && (
             <div className="mt-auto pt-6 flex justify-end">
               <span className="font-mono text-[9px] text-gray-500 tracking-wide">
-                {dossier.Cree_Par}
-                {formatCreatedAt(dossier.createdAt) && ` · ${formatCreatedAt(dossier.createdAt)}`}
+                {signature}
               </span>
             </div>
           )}

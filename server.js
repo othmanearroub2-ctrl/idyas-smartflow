@@ -110,52 +110,92 @@ const Dossier = sequelize.define('Dossier', {
 }, { timestamps: true });
 
 // --- DB Init & Server Start ---
-const startServer = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('✅ Connecté à PostgreSQL via Supabase');
-    
-    await sequelize.sync({ alter: true });
-    console.log('✅ Tables synchronisées');
-    
-    // Seed users
-    const usersToSeed = [
-      { email: 'othmanearroub2@gmail.com', name: 'Administrateur' },
-      { email: 'Exploitation@idyasshipping.ma', name: 'Exploitation' },
-      { email: 'Tbouchra@idyasshipping.ma', name: 'Bouchra' },
-      { email: 'Idrisstachfine@idyasshipping.ma', name: 'Idriss Tachfine' }
-    ];
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(process.env.SEED_DEFAULT_PASSWORD || 'IDYAS2026', salt);
+// Lightweight liveness endpoint. Declared before the readiness gate below so an
+// uptime pinger can keep the instance warm without touching the database.
+app.get('/healthz', (req, res) => res.status(200).send('ok'));
 
-    for (const u of usersToSeed) {
-      const existingUser = await User.findOne({ where: { email: u.email.toLowerCase() } });
-      if (!existingUser) {
-        await User.create({ 
-          email: u.email.toLowerCase(), 
-          password: hashedPassword,
-          name: u.name 
-        });
-        console.log(`🔑 Utilisateur ${u.name} initialisé.`);
-      } else if (existingUser.name === 'Utilisateur') {
-        existingUser.name = u.name;
-        await existingUser.save();
-        console.log(`🔑 Nom mis à jour pour ${u.email}`);
-      }
+const seedUsers = async () => {
+  const usersToSeed = [
+    { email: 'othmanearroub2@gmail.com', name: 'Administrateur' },
+    { email: 'Exploitation@idyasshipping.ma', name: 'Exploitation' },
+    { email: 'Tbouchra@idyasshipping.ma', name: 'Bouchra' },
+    { email: 'Idrisstachfine@idyasshipping.ma', name: 'Idriss Tachfine' }
+  ];
+
+  // Hashing costs ~100ms, so only pay for it if a user actually has to be created.
+  let hashedPassword = null;
+  const getHashedPassword = async () => {
+    if (!hashedPassword) {
+      const salt = await bcrypt.genSalt(10);
+      hashedPassword = await bcrypt.hash(process.env.SEED_DEFAULT_PASSWORD || 'IDYAS2026', salt);
     }
-    
-    // Start Express ONLY after DB is ready
-    app.listen(PORT, () => {
-      console.log(`🚀 Serveur backend démarré sur le port ${PORT}`);
-    });
-  } catch (err) {
-    console.error('❌ Erreur de connexion PostgreSQL :', err);
-    process.exit(1);
+    return hashedPassword;
+  };
+
+  for (const u of usersToSeed) {
+    const existingUser = await User.findOne({ where: { email: u.email.toLowerCase() } });
+    if (!existingUser) {
+      await User.create({
+        email: u.email.toLowerCase(),
+        password: await getHashedPassword(),
+        name: u.name
+      });
+      console.log(`🔑 Utilisateur ${u.name} initialisé.`);
+    } else if (existingUser.name === 'Utilisateur') {
+      existingUser.name = u.name;
+      await existingUser.save();
+      console.log(`🔑 Nom mis à jour pour ${u.email}`);
+    }
   }
 };
 
-startServer();
+const initDatabase = async () => {
+  await sequelize.authenticate();
+  console.log('✅ Connecté à PostgreSQL via Supabase');
+
+  // sync({ alter: true }) introspects every table and diffs it column by column,
+  // which dominates boot time (Dossier alone has ~50 columns) and can silently
+  // alter production schema. Run it deliberately via DB_SYNC, not on every boot.
+  if (process.env.DB_SYNC === 'alter') {
+    await sequelize.sync({ alter: true });
+    console.log('✅ Tables synchronisées (alter)');
+  } else if (process.env.DB_SYNC === 'true') {
+    await sequelize.sync();
+    console.log('✅ Tables synchronisées');
+  }
+
+  await seedUsers();
+};
+
+// Kick off DB init without blocking, so the port opens immediately. On a cold
+// start the platform can route traffic right away instead of holding the client
+// at TCP connect until the whole init finishes.
+let dbReady = false;
+const dbInitPromise = initDatabase()
+  .then(() => { dbReady = true; })
+  .catch((err) => {
+    console.error('❌ Erreur d\'initialisation PostgreSQL :', err);
+    throw err;
+  });
+// The gate below reports the failure per-request; swallow here to avoid an
+// unhandled rejection taking the process down.
+dbInitPromise.catch(() => {});
+
+// Requests arriving before init finishes wait for it rather than failing.
+app.use('/api', async (req, res, next) => {
+  if (dbReady) return next();
+  try {
+    await dbInitPromise;
+    next();
+  } catch (err) {
+    res.status(503).json({ error: 'Base de données indisponible, réessayez dans un instant' });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Serveur backend démarré sur le port ${PORT}`);
+});
 
 // --- Nodemailer Configuration ---
 const transporter = nodemailer.createTransport({

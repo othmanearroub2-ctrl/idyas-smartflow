@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { PHASES } from '../data/mockData';
 import DocumentViewer from './DocumentViewer';
 
-const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [], transporteurs = [], clients = [], editDossier = null }) => {
+const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [], transporteurs = [], clients = [], editDossier = null, user = null }) => {
   const modalRef = useRef(null);
 
   const emptyForm = {
@@ -269,7 +269,14 @@ const NouveauDossierModal = ({ isOpen, onClose, onSave, nextId, fournisseurs = [
               )}
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">{isEditMode ? 'Modifier le Dossier' : 'Nouveau Dossier'}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-white">{isEditMode ? 'Modifier le Dossier' : 'Nouveau Dossier'}</h2>
+                {!isEditMode && user && (
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium">
+                    ✍️ Créateur : <strong className="font-semibold">{user.name || user.email}</strong>
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-dark-400">{isEditMode ? `Modification de ${form.ID_Dossier}` : "Créer un nouveau dossier d'exploitation"}</p>
             </div>
           </div>

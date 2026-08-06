@@ -521,6 +521,7 @@ function App() {
         transporteurs={transporteursList}
         clients={clientsList}
         editDossier={editDossier}
+        user={user}
       />
 
       {/* Gestion des entités */}

@@ -52,6 +52,18 @@ const DossierTable = ({ data, onEdit, onArchive, onDelete, onViewDetail, isArchi
     return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
+  const formatCreatedSignature = (author, dateStr) => {
+    if (!author && !dateStr) return <span className="text-dark-500">—</span>;
+    const dateFormatted = dateStr ? new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+    const timeFormatted = dateStr ? new Date(dateStr).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+    return (
+      <div className="flex flex-col text-left">
+        <span className="font-semibold text-xs text-emerald-400">{author || 'Système'}</span>
+        {dateStr && <span className="text-[10px] text-dark-400">{dateFormatted} à {timeFormatted}</span>}
+      </div>
+    );
+  };
+
   const getModeBadge = (mode) => {
     switch (mode) {
       case 'Maritime':
@@ -135,6 +147,7 @@ const DossierTable = ({ data, onEdit, onArchive, onDelete, onViewDetail, isArchi
   const columns = [
     { key: 'ID_Dossier', label: 'ID Dossier' },
     { key: 'Type_Operation', label: 'Imp/Exp' },
+    { key: 'Cree_Par', label: 'Créé par' },
     { key: 'Fournisseur', label: 'Fournisseur' },
     { key: 'Client', label: 'Client' },
     { key: 'Transporteur', label: 'Transporteur' },
@@ -244,6 +257,9 @@ const DossierTable = ({ data, onEdit, onArchive, onDelete, onViewDetail, isArchi
                     ) : (
                       <span className="text-dark-500">—</span>
                     )}
+                  </td>
+                  <td className="table-cell">
+                    {formatCreatedSignature(dossier.Cree_Par, dossier.createdAt)}
                   </td>
                   <td className="table-cell font-medium text-dark-200">{dossier.Fournisseur}</td>
                   <td className="table-cell text-dark-300">{dossier.Client}</td>

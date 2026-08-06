@@ -295,8 +295,8 @@ const DossierDetailView = ({ dossier, onClose, onEdit }) => {
           {/* Shared: signature discrète — traçabilité du créateur du dossier */}
           {signature && (
             <div className="mt-auto pt-6 flex justify-end">
-              <span className="font-mono text-[9px] text-gray-500 tracking-wide">
-                {signature}
+              <span className="font-mono text-[9px] text-gray-500 tracking-wide italic">
+                Dossier créé par : {signature}
               </span>
             </div>
           )}

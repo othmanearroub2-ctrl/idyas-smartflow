@@ -157,16 +157,9 @@ const initDatabase = async () => {
   await sequelize.authenticate();
   console.log('✅ Connecté à PostgreSQL via Supabase');
 
-  // sync({ alter: true }) introspects every table and diffs it column by column,
-  // which dominates boot time (Dossier alone has ~50 columns) and can silently
-  // alter production schema. Run it deliberately via DB_SYNC, not on every boot.
-  if (process.env.DB_SYNC === 'alter') {
-    await sequelize.sync({ alter: true });
-    console.log('✅ Tables synchronisées (alter)');
-  } else if (process.env.DB_SYNC === 'true') {
-    await sequelize.sync();
-    console.log('✅ Tables synchronisées');
-  }
+  // Synchroniser les modèles avec PostgreSQL (ajoute automatiquement les colonnes manquantes comme Cree_Par)
+  await sequelize.sync({ alter: true });
+  console.log('✅ Tables synchronisées (alter)');
 
   await seedUsers();
 };

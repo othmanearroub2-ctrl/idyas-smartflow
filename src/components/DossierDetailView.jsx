@@ -19,12 +19,9 @@ const DossierDetailView = ({ dossier, onClose, onEdit }) => {
     return `${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
   };
 
-  // Footer signature. Dossiers created before Cree_Par existed have no author
-  // on record, so they show the creation date alone rather than a fabricated
-  // name. Nothing renders if neither is known.
-  const signature = [dossier.Cree_Par, formatCreatedAt(dossier.createdAt)]
-    .filter(Boolean)
-    .join(' · ');
+  const authorName = dossier.Cree_Par || 'Exploitation';
+  const createdDateStr = formatCreatedAt(dossier.createdAt || dossier.updatedAt);
+  const signature = [authorName, createdDateStr].filter(Boolean).join(' · ');
 
   const Field = ({ label, value, width = "180px" }) => (
     <div className="flex text-[13px] leading-relaxed mb-4">

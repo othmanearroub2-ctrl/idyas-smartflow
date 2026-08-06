@@ -259,7 +259,7 @@ const DossierTable = ({ data, onEdit, onArchive, onDelete, onViewDetail, isArchi
                     )}
                   </td>
                   <td className="table-cell">
-                    {formatCreatedSignature(dossier.Cree_Par, dossier.createdAt)}
+                    {formatCreatedSignature(dossier.Cree_Par, dossier.createdAt || dossier.updatedAt)}
                   </td>
                   <td className="table-cell font-medium text-dark-200">{dossier.Fournisseur}</td>
                   <td className="table-cell text-dark-300">{dossier.Client}</td>
